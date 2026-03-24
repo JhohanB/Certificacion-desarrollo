@@ -1,0 +1,632 @@
+-- =====================================================
+-- BASE DE DATOS: GESTIÓN DE CERTIFICACIÓN SENA
+-- Versión 3.0
+-- =====================================================
+
+CREATE DATABASE IF NOT EXISTS gestion_certificacion
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE gestion_certificacion;
+
+-- =====================================================
+-- ROLES
+-- activo = FALSE → el rol existe pero no participa en el flujo
+-- activo = TRUE  → el rol participa normalmente
+-- =====================================================
+
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion TEXT,
+    requiere_firma BOOLEAN DEFAULT FALSE,
+    activo BOOLEAN DEFAULT TRUE
+);
+
+-- =====================================================
+-- USUARIOS (SOLO FUNCIONARIOS)
+-- =====================================================
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    documento VARCHAR(20) NOT NULL UNIQUE,
+    nombre_completo VARCHAR(150) NOT NULL,
+    correo VARCHAR(120) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    firma_url VARCHAR(255) NULL,
+    firma_registrada BOOLEAN DEFAULT FALSE,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- USUARIO_ROLES
+-- =====================================================
+
+CREATE TABLE usuario_roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    rol_id INT NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    asignado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_usuario_rol (usuario_id, rol_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- MODULOS
+-- =====================================================
+
+CREATE TABLE modulos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- =====================================================
+-- ACCIONES
+-- =====================================================
+
+CREATE TABLE acciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- =====================================================
+-- PERMISOS POR ROL
+-- =====================================================
+
+CREATE TABLE rol_permisos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rol_id INT NOT NULL,
+    modulo_id INT NOT NULL,
+    accion_id INT NOT NULL,
+    UNIQUE KEY unique_permiso (rol_id, modulo_id, accion_id),
+    FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (modulo_id) REFERENCES modulos(id) ON DELETE CASCADE,
+    FOREIGN KEY (accion_id) REFERENCES acciones(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- TIPOS DE PROGRAMA
+-- Define qué documentos y qué roles firmantes aplican
+-- =====================================================
+
+CREATE TABLE tipo_programas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- =====================================================
+-- DOCUMENTOS REQUERIDOS
+-- =====================================================
+
+CREATE TABLE documentos_requeridos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    descripcion TEXT
+);
+
+-- =====================================================
+-- DOCUMENTOS POR TIPO DE PROGRAMA
+-- =====================================================
+
+CREATE TABLE tipo_programa_documentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_programa_id INT NOT NULL,
+    documento_id INT NOT NULL,
+    obligatorio BOOLEAN DEFAULT TRUE,
+    UNIQUE KEY unique_tipo_doc (tipo_programa_id, documento_id),
+    FOREIGN KEY (tipo_programa_id) REFERENCES tipo_programas(id) ON DELETE CASCADE,
+    FOREIGN KEY (documento_id) REFERENCES documentos_requeridos(id)
+);
+
+-- =====================================================
+-- ROLES QUE FIRMAN POR TIPO DE PROGRAMA
+-- orden_firma NULL = puede firmar en cualquier orden
+-- orden_firma 99  = firma de último (Coordinador)
+-- Solo se crean registros de firma para roles con activo = TRUE
+-- =====================================================
+
+CREATE TABLE tipo_programa_roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_programa_id INT NOT NULL,
+    rol_id INT NOT NULL,
+    orden_firma INT NULL,
+    obligatorio BOOLEAN DEFAULT TRUE,
+    UNIQUE KEY unique_tipo_rol (tipo_programa_id, rol_id),
+    FOREIGN KEY (tipo_programa_id) REFERENCES tipo_programas(id) ON DELETE CASCADE,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
+);
+
+-- =====================================================
+-- SOLICITUDES
+-- - Sin numero_radicado, se consulta por documento + ficha
+-- - Sin FK a programas, el aprendiz ingresa los datos manualmente
+-- - El funcionario puede corregir tipo_programa_id, numero_ficha
+--   y nombre_programa, pero NO los documentos ni datos personales
+-- =====================================================
+
+CREATE TABLE solicitudes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    numero_documento VARCHAR(20) NOT NULL,
+    numero_ficha VARCHAR(30) NOT NULL,
+    nombre_aprendiz VARCHAR(150) NOT NULL,
+    correo_aprendiz VARCHAR(120) NULL,
+    tipo_programa_id INT NOT NULL,
+    nombre_programa VARCHAR(150) NOT NULL,
+    estado_actual ENUM(
+        'PENDIENTE_REVISION',
+        'CON_OBSERVACIONES',
+        'CORREGIDO',
+        'PENDIENTE_FIRMAS',
+        'PENDIENTE_CERTIFICACION',
+        'CERTIFICADO'
+    ) NOT NULL DEFAULT 'PENDIENTE_REVISION',
+    pdf_consolidado_url VARCHAR(255) NULL,
+    pdf_hash VARCHAR(255) NULL,
+    fecha_generacion_pdf TIMESTAMP NULL,
+    fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    observaciones_generales TEXT NULL,
+    UNIQUE KEY unique_doc_ficha (numero_documento, numero_ficha),
+    INDEX idx_estado (estado_actual),
+    INDEX idx_tipo_programa (tipo_programa_id),
+    INDEX idx_fecha_solicitud (fecha_solicitud),
+    FOREIGN KEY (tipo_programa_id) REFERENCES tipo_programas(id)
+);
+
+-- =====================================================
+-- DOCUMENTOS DE SOLICITUD
+-- - Sin UNIQUE KEY (solicitud_id, documento_id) para permitir versiones
+-- - es_version_activa indica cuál es la versión vigente
+-- - Al aprobar un documento, el backend elimina versiones anteriores
+--   y bloquea el documento
+-- =====================================================
+
+CREATE TABLE solicitud_documentos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id INT NOT NULL,
+    documento_id INT NOT NULL,
+    archivo_url VARCHAR(255) NOT NULL,
+    version INT DEFAULT 1,
+    es_version_activa BOOLEAN DEFAULT TRUE,
+    estado_documento ENUM(
+        'PENDIENTE',
+        'OBSERVADO',
+        'APROBADO'
+    ) DEFAULT 'PENDIENTE',
+    observaciones TEXT NULL,
+    aprobado_por INT NULL,
+    fecha_revision TIMESTAMP NULL,
+    bloqueado BOOLEAN DEFAULT FALSE,
+    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_solicitud_documento (solicitud_id, documento_id),
+    INDEX idx_version_activa (solicitud_id, documento_id, es_version_activa),
+    FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE,
+    FOREIGN KEY (documento_id) REFERENCES documentos_requeridos(id),
+    FOREIGN KEY (aprobado_por) REFERENCES usuarios(id)
+);
+
+-- =====================================================
+-- HISTORIAL DE ESTADOS
+-- =====================================================
+
+CREATE TABLE estados_historial (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id INT NOT NULL,
+    estado_anterior ENUM(
+        'PENDIENTE_REVISION',
+        'CON_OBSERVACIONES',
+        'CORREGIDO',
+        'PENDIENTE_FIRMAS',
+        'PENDIENTE_CERTIFICACION',
+        'CERTIFICADO'
+    ) NULL,
+    estado_nuevo ENUM(
+        'PENDIENTE_REVISION',
+        'CON_OBSERVACIONES',
+        'CORREGIDO',
+        'PENDIENTE_FIRMAS',
+        'PENDIENTE_CERTIFICACION',
+        'CERTIFICADO'
+    ) NOT NULL,
+    usuario_id INT NULL,
+    motivo TEXT NULL,
+    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- =====================================================
+-- FIRMAS
+-- - Se crean registros solo para roles con activo = TRUE
+-- - Para verificar si el Coordinador puede firmar:
+--     SELECT COUNT(*) FROM firmas f
+--     JOIN roles r ON r.id = f.rol_id
+--     WHERE f.solicitud_id = ?
+--     AND r.nombre != 'COORDINADOR'
+--     AND r.activo = TRUE
+--     AND f.estado_firma = 'PENDIENTE'
+--   Si el resultado es 0, el Coordinador puede firmar
+-- =====================================================
+
+CREATE TABLE firmas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id INT NOT NULL,
+    rol_id INT NOT NULL,
+    usuario_id INT NULL,
+    estado_firma ENUM('PENDIENTE','FIRMADO') DEFAULT 'PENDIENTE',
+    fecha_firma TIMESTAMP NULL,
+    ip_origen VARCHAR(45) NULL,
+    UNIQUE KEY unique_firma (solicitud_id, rol_id),
+    INDEX idx_estado_firma (estado_firma),
+    FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE,
+    FOREIGN KEY (rol_id) REFERENCES roles(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- =====================================================
+-- TOKENS PARA EDICION DE SOLICITUD (APRENDIZ)
+-- - Sin ip_uso por privacidad
+-- - fecha_uso se llena cuando el aprendiz usa el token
+-- =====================================================
+
+CREATE TABLE tokens_edicion (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usado BOOLEAN DEFAULT FALSE,
+    fecha_uso TIMESTAMP NULL,
+    FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- NOTIFICACIONES DE CORREO
+-- tipo_notificacion posibles:
+--   SOLICITUD_RECIBIDA → al crear la solicitud
+--   OBSERVACION        → cuando un documento es observado
+--   TOKEN_EDICION      → cuando se envía el link de corrección
+--   PENDIENTE_FIRMA    → cuando le toca firmar a un funcionario
+--   FIRMA_COORDINADOR  → cuando todos los roles activos firmaron
+--   CERTIFICADO        → cuando el proceso finaliza
+-- =====================================================
+
+CREATE TABLE notificaciones_email (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id INT NOT NULL,
+    destinatario VARCHAR(120) NOT NULL,
+    tipo_notificacion VARCHAR(80) NOT NULL,
+    asunto VARCHAR(255) NULL,
+    enviado BOOLEAN DEFAULT FALSE,
+    fecha_envio TIMESTAMP NULL,
+    error_mensaje TEXT NULL,
+    INDEX idx_solicitud_notif (solicitud_id),
+    INDEX idx_tipo_notif (tipo_notificacion),
+    FOREIGN KEY (solicitud_id) REFERENCES solicitudes(id) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- AUDITORIA
+-- =====================================================
+
+CREATE TABLE auditoria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NULL,
+    accion VARCHAR(100) NOT NULL,
+    tabla_afectada VARCHAR(100) NOT NULL,
+    registro_id BIGINT NULL,
+    descripcion TEXT NULL,
+    ip_origen VARCHAR(45) NULL,
+    fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_usuario_auditoria (usuario_id),
+    INDEX idx_fecha_auditoria (fecha_evento),
+    INDEX idx_tabla_auditoria (tabla_afectada),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+ALTER TABLE usuarios ADD COLUMN debe_cambiar_password BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE usuarios ADD COLUMN debe_registrar_firma BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE firmas 
+ADD COLUMN motivo_rechazo TEXT NULL,
+ADD COLUMN estado_firma ENUM('PENDIENTE', 'FIRMADO', 'RECHAZADO') DEFAULT 'PENDIENTE';
+
+CREATE TABLE plantillas_formato (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    version VARCHAR(20) NOT NULL,
+    archivo_url VARCHAR(500) NOT NULL,
+    activa BOOLEAN DEFAULT FALSE,
+    creado_por INT NULL,
+    creado_en DATETIME DEFAULT NOW(),
+    FOREIGN KEY (creado_por) REFERENCES usuarios(id)
+);
+
+CREATE TABLE coordenadas_firma (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plantilla_id INT NOT NULL,
+    rol_id INT NOT NULL,
+    pagina INT NOT NULL DEFAULT 1,
+    x_porcentaje FLOAT NOT NULL,
+    y_porcentaje FLOAT NOT NULL,
+    ancho_porcentaje FLOAT NOT NULL,
+    alto_porcentaje FLOAT NOT NULL,
+    FOREIGN KEY (plantilla_id) REFERENCES plantillas_formato(id),
+    FOREIGN KEY (rol_id) REFERENCES roles(id),
+    UNIQUE KEY uq_plantilla_rol (plantilla_id, rol_id)
+);
+
+ALTER TABLE solicitudes 
+ADD COLUMN plantilla_id INT NULL,
+ADD FOREIGN KEY (plantilla_id) REFERENCES plantillas_formato(id);
+
+ALTER TABLE tipo_programas ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- Trigger: al activar una plantilla, desactiva la anterior
+DELIMITER //
+CREATE TRIGGER tr_plantilla_activa
+BEFORE UPDATE ON plantillas_formato
+FOR EACH ROW
+BEGIN
+    IF NEW.activa = TRUE AND OLD.activa = FALSE THEN
+        SET NEW.activa = TRUE;
+    END IF;
+END//
+DELIMITER ;
+
+-- Trigger: al crear solicitud, asignar plantilla activa automáticamente
+DELIMITER //
+CREATE TRIGGER tr_asignar_plantilla
+BEFORE INSERT ON solicitudes
+FOR EACH ROW
+BEGIN
+    SET NEW.plantilla_id = (
+        SELECT id FROM plantillas_formato WHERE activa = TRUE LIMIT 1
+    );
+END//
+DELIMITER ;
+
+ALTER TABLE coordenadas_firma
+ADD COLUMN nombre_x_porcentaje FLOAT NOT NULL DEFAULT 0,
+ADD COLUMN nombre_y_porcentaje FLOAT NOT NULL DEFAULT 0,
+ADD COLUMN nombre_ancho_porcentaje FLOAT NOT NULL DEFAULT 10,
+ADD COLUMN nombre_alto_porcentaje FLOAT NOT NULL DEFAULT 5;
+
+ALTER TABLE usuarios 
+ADD COLUMN intentos_fallidos INT DEFAULT 0,
+ADD COLUMN bloqueado_hasta DATETIME NULL;
+
+ALTER TABLE usuarios
+ADD COLUMN telefono VARCHAR(20) NULL AFTER correo;
+
+ALTER TABLE solicitudes
+ADD COLUMN telefono VARCHAR(20) NULL AFTER correo_aprendiz;
+
+CREATE TABLE refresh_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    token VARCHAR(500) NOT NULL,
+    expira_en DATETIME NOT NULL,
+    revocado TINYINT(1) DEFAULT 0,
+    creado_en DATETIME DEFAULT NOW(),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- =====================================================
+-- DATOS INICIALES
+-- =====================================================
+
+-- Roles del sistema
+-- INSTRUCTOR_SEGUIMIENTO activo = FALSE hasta resolver el flujo del paz y salvo
+INSERT INTO roles (nombre, descripcion, requiere_firma, activo) VALUES
+('ADMIN',                    'Administrador del sistema',                          FALSE, TRUE),
+('FUNCIONARIO_CERTIFICACION','Revisa y aprueba documentos de solicitudes',         FALSE, TRUE),
+('APE',                      'Agencia Pública de Empleo, firma documentos',   TRUE,  TRUE),
+('INSTRUCTOR_SEGUIMIENTO',   'Instructor de seguimiento, firma documentos',        TRUE,  FALSE),
+('BIENESTAR',                'Bienestar al Aprendiz, firma documentos',            TRUE,  TRUE),
+('BIBLIOTECA',               'Biblioteca, firma documentos',                       TRUE,  TRUE),
+('COORDINADOR',              'Coordinador Academico, firma de último en el proceso',         TRUE,  TRUE);
+
+-- Módulos del sistema
+INSERT INTO modulos (nombre) VALUES
+('solicitudes'),
+('documentos'),
+('firmas'),
+('usuarios'),
+('roles'),
+('permisos'),
+('tipo_programas'),
+('tipo_programa_documentos'),
+('tipo_programa_roles'),
+('notificaciones'),
+('auditoria'),
+('reportes'),
+('tokens');
+
+-- Acciones posibles
+INSERT INTO acciones (nombre) VALUES
+('crear'),
+('leer'),
+('actualizar'),
+('eliminar'),
+('firmar'),
+('aprobar'),
+('observar'),
+('descargar'),
+('certificar');
+
+-- Tipos de programa
+INSERT INTO tipo_programas (nombre) VALUES
+('TECNICO'),      -- id 1
+('TECNOLOGO'),    -- id 2
+('OPERARIO'),     -- id 3
+('AUXILIAR');     -- id 4
+
+-- Documentos requeridos
+INSERT INTO documentos_requeridos (nombre, descripcion) VALUES
+('Paz y Salvo',                          'Requerido para todos los programas'),                                         -- id 1
+('Documento de Identidad',               'Copia del documento de identidad del aprendiz'),                              -- id 2
+('Carnet Destruido o Denuncia',          'Carnet destruido o denuncia en caso de pérdida o no recibió carnet'),         -- id 3
+('Carta Laboral',                        'Carta laboral del aprendiz, requerida para Técnico, Tecnólogo y Operario'),   -- id 4
+('Certificado APE',                      'Certificado de Agencia Pública de Empleo'),                              -- id 5
+('Certificado Asistencia TYT o Resultado de Pruebas', 'Requerido únicamente para Tecnólogos');                          -- id 6
+
+-- Documentos requeridos por tipo de programa
+-- TECNICO: Paz y Salvo, Doc Identidad, Carnet/Denuncia, Carta Laboral, Cert APE
+INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio) VALUES
+(1, 1, TRUE),
+(1, 2, TRUE),
+(1, 3, TRUE),
+(1, 4, TRUE),
+(1, 5, TRUE);
+
+-- TECNOLOGO: Paz y Salvo, Doc Identidad, Carnet/Denuncia, Carta Laboral, Cert APE, Cert TYT
+INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio) VALUES
+(2, 1, TRUE),
+(2, 2, TRUE),
+(2, 3, TRUE),
+(2, 4, TRUE),
+(2, 5, TRUE),
+(2, 6, TRUE);
+
+-- OPERARIO: Paz y Salvo, Doc Identidad, Carnet/Denuncia, Carta Laboral, Cert APE
+INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio) VALUES
+(3, 1, TRUE),
+(3, 2, TRUE),
+(3, 3, TRUE),
+(3, 4, TRUE),
+(3, 5, TRUE);
+
+-- AUXILIAR: Paz y Salvo, Doc Identidad, Carnet/Denuncia, Cert APE
+INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio) VALUES
+(4, 1, TRUE),
+(4, 2, TRUE),
+(4, 3, TRUE),
+(4, 5, TRUE);
+
+-- Roles firmantes por tipo de programa
+-- INSTRUCTOR_SEGUIMIENTO (id=4) no se agrega hasta resolver el flujo del paz y salvo
+-- orden_firma NULL = sin orden específico
+-- orden_firma 99  = firma de último (Coordinador)
+
+-- TECNICO
+INSERT INTO tipo_programa_roles (tipo_programa_id, rol_id, orden_firma, obligatorio) VALUES
+(1, 3, 0, TRUE),  -- APE
+(1, 4, 0, TRUE),  -- Instructor Seguimiento
+(1, 5, 0, TRUE),  -- Bienestar
+(1, 6, 0, TRUE),  -- Biblioteca
+(1, 7, 99,   TRUE);  -- Coordinador (último)
+
+-- TECNOLOGO
+INSERT INTO tipo_programa_roles (tipo_programa_id, rol_id, orden_firma, obligatorio) VALUES
+(2, 3, 0, TRUE),  -- APE
+(2, 4, 0, TRUE),  -- Instructor Seguimiento
+(2, 5, 0, TRUE),  -- Bienestar
+(2, 6, 0, TRUE),  -- Biblioteca
+(2, 7, 99,   TRUE);  -- Coordinador (último)
+
+-- OPERARIO
+INSERT INTO tipo_programa_roles (tipo_programa_id, rol_id, orden_firma, obligatorio) VALUES
+(3, 3, 0, TRUE),  -- APE
+(3, 4, 0, TRUE),  -- Instructor Seguimiento
+(3, 5, 0, TRUE),  -- Bienestar
+(3, 6, 0, TRUE),  -- Biblioteca
+(3, 7, 99,   TRUE);  -- Coordinador (último)
+
+-- AUXILIAR
+INSERT INTO tipo_programa_roles (tipo_programa_id, rol_id, orden_firma, obligatorio) VALUES
+(4, 3, 0, TRUE),  -- APE
+(4, 4, 0, TRUE),  -- Instructor Seguimiento
+(4, 5, 0, TRUE),  -- Bienestar
+(4, 6, 0, TRUE),  -- Biblioteca
+(4, 7, 99,   TRUE);  -- Coordinador (último)
+
+-- =====================================================
+-- PERMISOS POR ROL
+-- =====================================================
+
+-- ADMIN: acceso total
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id)
+SELECT 1, m.id, a.id
+FROM modulos m, acciones a;
+
+-- FUNCIONARIO_CERTIFICACION
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(2, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(2, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='actualizar')),
+(2, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='certificar')),
+(2, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(2, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='aprobar')),
+(2, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='observar')),
+(2, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(2, (SELECT id FROM modulos WHERE nombre='reportes'),    (SELECT id FROM acciones WHERE nombre='leer')),
+(2, (SELECT id FROM modulos WHERE nombre='reportes'),    (SELECT id FROM acciones WHERE nombre='descargar'));
+
+-- APE (rol_id = 3)
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(3, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(3, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(3, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(3, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='leer')),
+(3, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='firmar'));
+
+-- INSTRUCTOR_SEGUIMIENTO (rol_id = 4)
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(4, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(4, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(4, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(4, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='leer')),
+(4, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='firmar'));
+
+-- BIENESTAR (rol_id = 5)
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(5, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(5, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(5, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(5, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='leer')),
+(5, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='firmar'));
+
+-- BIBLIOTECA (rol_id = 6)
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(6, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(6, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(6, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(6, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='leer')),
+(6, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='firmar'));
+
+-- COORDINADOR (rol_id = 7)
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(7, (SELECT id FROM modulos WHERE nombre='solicitudes'), (SELECT id FROM acciones WHERE nombre='leer')),
+(7, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='leer')),
+(7, (SELECT id FROM modulos WHERE nombre='documentos'),  (SELECT id FROM acciones WHERE nombre='descargar')),
+(7, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='leer')),
+(7, (SELECT id FROM modulos WHERE nombre='firmas'),      (SELECT id FROM acciones WHERE nombre='firmar')),
+(7, (SELECT id FROM modulos WHERE nombre='reportes'),    (SELECT id FROM acciones WHERE nombre='leer')),
+(7, (SELECT id FROM modulos WHERE nombre='reportes'),    (SELECT id FROM acciones WHERE nombre='descargar'));
+
+-- Agregar módulo plantillas
+INSERT INTO modulos (nombre) VALUES ('plantillas');
+
+-- Agregar acciones
+INSERT INTO acciones (nombre) VALUES ('leer'), ('crear'), ('editar')
+ON DUPLICATE KEY UPDATE nombre = nombre;
+
+-- ADMIN (rol_id=1): leer, crear, editar
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id) VALUES
+(1, 14, 2),  -- leer
+(1, 14, 1),  -- crear
+(1, 14, 10), -- editar
+-- FUNCIONARIO_CERTIFICACION (rol_id=2): leer, crear, editar
+(2, 14, 2),  -- leer
+(2, 14, 1),  -- crear
+(2, 14, 10); -- editar
+
+-- Asignar permiso descargar de solicitudes a ADMIN y FUNCIONARIO_CERTIFICACION
+INSERT INTO rol_permisos (rol_id, modulo_id, accion_id)
+SELECT r.id, m.id, a.id
+FROM roles r, modulos m, acciones a
+WHERE r.id IN (1, 2)
+AND m.nombre = 'solicitudes'
+AND a.nombre = 'descargar'
+ON DUPLICATE KEY UPDATE rol_id = rol_id;
