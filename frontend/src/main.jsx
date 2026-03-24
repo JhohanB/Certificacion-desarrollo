@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import esES from 'antd/locale/es_ES'
 import { AuthProvider } from './context/AuthContext'
-import App from './App'
+import App from './App.jsx'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
