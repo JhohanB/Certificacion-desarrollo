@@ -342,7 +342,7 @@ def get_firmas_by_solicitud(db: Session, solicitud_id: int) -> list:
                 r.nombre AS nombre_rol,
                 f.usuario_id,
                 u.nombre_completo AS nombre_usuario,
-                f.estado_firma,
+                f.estado_firma, f.tipo_rechazo,
                 f.motivo_rechazo, f.fecha_firma
             FROM firmas f
             INNER JOIN roles r ON r.id = f.rol_id
@@ -463,12 +463,13 @@ def registrar_firma(db: Session, solicitud_id: int, rol_id: int, usuario_id: int
         raise
 
 
-def registrar_rechazo_firma(db: Session, solicitud_id: int, rol_id: int, usuario_id: int, motivo: str, ip_origen: str) -> None:
+def registrar_rechazo_firma(db: Session, solicitud_id: int, rol_id: int, usuario_id: int, motivo: str, tipo_rechazo: str, ip_origen: str) -> None:
     try:
         query = text("""
             UPDATE firmas 
             SET estado_firma = 'RECHAZADO',
                 motivo_rechazo = :motivo,
+                tipo_rechazo = :tipo_rechazo,
                 usuario_id = :usuario_id,
                 fecha_firma = NOW(),
                 ip_origen = :ip_origen
@@ -481,6 +482,7 @@ def registrar_rechazo_firma(db: Session, solicitud_id: int, rol_id: int, usuario
             "rol_id": rol_id,
             "usuario_id": usuario_id,
             "motivo": motivo,
+            "tipo_rechazo": tipo_rechazo,
             "ip_origen": ip_origen
         })
         db.commit()

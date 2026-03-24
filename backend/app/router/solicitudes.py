@@ -167,52 +167,69 @@ async def enviar_observaciones(
 ):
     from core.security import generate_edit_token
     from app.crud.documentos import create_token_edicion, get_documentos_observados
-    from app.utils.email_service import enviar_observaciones_completas
+    from app.utils.email_service import enviar_observaciones_completas, enviar_notificacion_rechazo_externo
+    from sqlalchemy import text
 
     solicitud = crud_solicitudes.get_solicitud_by_id(db, solicitud_id)
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
     if solicitud["estado_actual"] not in ["PENDIENTE_REVISION", "CON_OBSERVACIONES"]:
-        raise HTTPException(
-            status_code=400,
-            detail="La solicitud debe estar en revisión para enviar observaciones"
-        )
+        raise HTTPException(status_code=400, detail="La solicitud debe estar en revisión")
 
-    docs_observados = get_documentos_observados(db, solicitud_id)
+    # Verificar tipo de rechazo de la firma rechazada
+    firma_rechazada = db.execute(text("""
+        SELECT f.tipo_rechazo, f.motivo_rechazo, u.nombre_completo, u.correo
+        FROM firmas f
+        LEFT JOIN usuarios u ON u.id = f.usuario_id
+        WHERE f.solicitud_id = :sid AND f.estado_firma = 'RECHAZADO'
+        ORDER BY f.fecha_firma DESC LIMIT 1
+    """), {"sid": solicitud_id}).mappings().first()
 
-    if not docs_observados and not solicitud.get("observaciones_generales"):
-        raise HTTPException(
-            status_code=400,
-            detail="No hay documentos observados ni observaciones generales para notificar"
-        )
-
-    token = generate_edit_token()
-    create_token_edicion(db, solicitud_id, token)
-
-    await enviar_observaciones_completas(
-        correo=solicitud["correo_aprendiz"],
-        nombre=solicitud["nombre_aprendiz"],
-        programa=solicitud["nombre_programa"],
-        docs_observados=docs_observados,
-        token=token,
-        nombre_funcionario=current_user["nombre_completo"],
-        correo_funcionario=current_user["correo"],
-        observaciones_generales=solicitud.get("observaciones_generales"),
-        solicitud_id=solicitud_id,
-        db=db,
-    )
-
+    docs_observados = list(get_documentos_observados(db, solicitud_id))
     obs = solicitud.get("observaciones_generales") or ""
-    motivo = f"{obs}" if obs else "Observaciones enviadas al aprendiz"
 
-    crud_solicitudes.update_estado_solicitud(
-        db, solicitud_id, "CON_OBSERVACIONES",
-        current_user["id"], motivo
-    )
+    if not docs_observados and not obs:
+        raise HTTPException(status_code=400, detail="No hay observaciones para notificar")
 
-    logger.info(f"Observaciones enviadas al aprendiz para solicitud {solicitud_id}")
-    return {"message": "Observaciones enviadas al aprendiz correctamente"}
+    tipo_rechazo = firma_rechazada["tipo_rechazo"] if firma_rechazada else "POR_DOCUMENTOS"
+
+    if tipo_rechazo == "POR_OTRA_RAZON":
+        # Correo informativo sin token
+        await enviar_notificacion_rechazo_externo(
+            correo=solicitud["correo_aprendiz"],
+            nombre=solicitud["nombre_aprendiz"],
+            programa=solicitud["nombre_programa"],
+            motivo=obs,
+            nombre_funcionario_rechazo=firma_rechazada["nombre_completo"] if firma_rechazada else current_user["nombre_completo"],
+            correo_funcionario_rechazo=firma_rechazada["correo"] if firma_rechazada else current_user["correo"],
+            solicitud_id=solicitud_id,
+            db=db,
+        )
+        crud_solicitudes.update_estado_solicitud(
+            db, solicitud_id, "CON_OBSERVACIONES",
+            current_user["id"], f"Notificación enviada al aprendiz: {obs}"
+        )
+    else:
+        # Correo con token de corrección
+        token = generate_edit_token()
+        create_token_edicion(db, solicitud_id, token)
+        await enviar_observaciones_completas(
+            correo=solicitud["correo_aprendiz"],
+            nombre=solicitud["nombre_aprendiz"],
+            programa=solicitud["nombre_programa"],
+            docs_observados=docs_observados,
+            token=token,
+            observaciones_generales=obs if obs else None,
+            solicitud_id=solicitud_id,
+            db=db,
+        )
+        crud_solicitudes.update_estado_solicitud(
+            db, solicitud_id, "CON_OBSERVACIONES",
+            current_user["id"], f"Observaciones enviadas al aprendiz: {obs}"
+        )
+
+    return {"message": "Notificación enviada al aprendiz correctamente"}
 
 
 @router.get("/{solicitud_id}/tokens")
@@ -604,8 +621,6 @@ async def confirmar_revision(
             programa=solicitud["nombre_programa"],
             docs_observados=docs_observados,
             token=token,
-            nombre_funcionario=current_user["nombre_completo"],
-            correo_funcionario=current_user["correo"],
             observaciones_generales=obs if hay_observaciones else None,
             solicitud_id=solicitud_id,
             db=db,
@@ -699,3 +714,27 @@ def get_historial_estados(
             vistos[key] = True
             resultado.append(dict(row))
     return resultado
+
+
+class CambiarTipoRechazoRequest(PydanticBaseModel):
+    tipo_rechazo: str
+    firma_id: int
+
+@router.put("/{solicitud_id}/cambiar-tipo-rechazo")
+def cambiar_tipo_rechazo(
+    solicitud_id: int,
+    datos: CambiarTipoRechazoRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(check_permission("solicitudes", "actualizar"))
+):
+    from sqlalchemy import text
+    db.execute(text("""
+        UPDATE firmas SET tipo_rechazo = :tipo_rechazo
+        WHERE id = :firma_id AND solicitud_id = :solicitud_id
+    """), {
+        "tipo_rechazo": datos.tipo_rechazo,
+        "firma_id": datos.firma_id,
+        "solicitud_id": solicitud_id
+    })
+    db.commit()
+    return {"message": "Tipo de rechazo actualizado"}

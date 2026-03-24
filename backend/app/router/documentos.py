@@ -488,7 +488,8 @@ async def rechazar_firma(
     # Registrar rechazo solo de esta firma
     crud_docs.registrar_rechazo_firma(
         db, solicitud_id, firma["rol_id"],
-        current_user["id"], datos.motivo_rechazo, ip_origen
+        current_user["id"], datos.motivo_rechazo,
+        datos.tipo_rechazo, ip_origen
     )
 
     # Guardar observación

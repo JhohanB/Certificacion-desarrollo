@@ -160,6 +160,11 @@ def template_solicitud_recibida(nombre: str, programa: str, ficha: str, tipo_pro
         <a href="{frontend_url}/solicitud/consultar" class="btn">Consultar mi solicitud</a>
 
         <p>Te notificaremos por este correo cuando haya novedades en tu proceso.</p>
+
+        <div class="info-box">
+            <p>Si tienes dudas comunícate al siguiente correo.</p>
+            <p>📧 certificacion9121@sena.edu.co </p>
+        </div>
     """
     return _base_template(contenido)
 
@@ -176,7 +181,7 @@ NOMBRES_CAMPOS = {
     "numero_documento": "Número de documento",
 }
 
-def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, nombre_funcionario: str = None, correo_funcionario: str = None, observaciones_generales: str = None) -> str:
+def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, nombre_funcionario: str = None, observaciones_generales: str = None) -> str:
     docs_html = ""
     if docs_observados:
         items = "".join([
@@ -197,15 +202,6 @@ def template_observaciones_completas(nombre: str, programa: str, docs_observados
             <p>{observaciones_generales}</p>
         </div>"""
 
-    funcionario_html = ""
-    if nombre_funcionario:
-        funcionario_html = f"""
-        <div class="info-box">
-            <p><strong>Funcionario de certificación:</strong></p>
-            <p>👤 {nombre_funcionario}</p>
-            <p>📧 {correo_funcionario}</p>
-        </div>"""
-
     contenido = f"""
         <h2>Tu solicitud requiere correcciones</h2>
         <p>Hola <strong>{nombre}</strong>,</p>
@@ -216,8 +212,10 @@ def template_observaciones_completas(nombre: str, programa: str, docs_observados
         <p>Haz clic en el siguiente botón para realizar las correcciones. Este enlace es de un solo uso:</p>
         <a href="{link_edicion}" class="btn">Corregir mi solicitud</a>
         <p><strong>Importante:</strong> Este enlace no tiene fecha de vencimiento pero solo puede usarse una vez.</p>
-        {funcionario_html}
-        <p>Si tienes dudas comunícate directamente con el funcionario de certificación.</p>
+        <div class="info-box">
+            <p>Si tienes dudas comunícate al siguiente correo.</p>
+            <p>📧 certificacion9121@sena.edu.co </p>
+        </div>
     """
     return _base_template(contenido)
 
@@ -296,5 +294,26 @@ def template_restablecer_password(nombre: str, correo: str, password_temporal: s
         <a href="{frontend_url}/login" class="btn">Ingresar al sistema</a>
 
         <p>Si no solicitaste este cambio comunícate inmediatamente con el administrador del sistema.</p>
+    """
+    return _base_template(contenido)
+
+
+def template_notificacion_rechazo_externo(nombre: str, programa: str, motivo: str, nombre_funcionario_rechazo: str, correo_funcionario_rechazo: str) -> str:
+    contenido = f"""
+        <h2>Notificación sobre tu solicitud</h2>
+        <p>Hola <strong>{nombre}</strong>,</p>
+        <p>Tu solicitud del programa <strong>{programa}</strong> tiene una observación 
+        que no requiere corrección de documentos:</p>
+        <div class="alert-box">
+            <p><strong>⚠️ Observación:</strong></p>
+            <p>{motivo}</p>
+        </div>
+        <div class="info-box">
+            <p><strong>Contacta al funcionario que realizó la observación:</strong></p>
+            <p>👤 {nombre_funcionario_rechazo}</p>
+            <p>📧 {correo_funcionario_rechazo}</p>
+        </div>
+        <p>No es necesario que corrijas ningún documento. 
+        Comunícate con el funcionario para resolver este inconveniente.</p>
     """
     return _base_template(contenido)

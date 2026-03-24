@@ -210,6 +210,7 @@ export default function DetalleSolicitud() {
   const [coordinadores, setCoordinadores] = useState([])
   const [observacionesGenerales, setObservacionesGenerales] = useState('')
   const [guardandoObservaciones, setGuardandoObservaciones] = useState(false)
+  const [tipoRechazoActual, setTipoRechazoActual] = useState(null)
 
   // Modales
   const [modalFirmar, setModalFirmar] = useState(false)
@@ -325,6 +326,13 @@ export default function DetalleSolicitud() {
     }
   }, [modalConfirmarRevision])
 
+  useEffect(() => {
+    if (firmas.length > 0) {
+      const firmaRechazada = firmas.find(f => f.estado_firma === 'RECHAZADO')
+      if (firmaRechazada) setTipoRechazoActual(firmaRechazada.tipo_rechazo)
+    }
+  }, [firmas])
+
   // -------------------------------------------------------
   // Acciones funcionario
   // -------------------------------------------------------
@@ -434,6 +442,7 @@ export default function DetalleSolicitud() {
     setEnviando(true)
     try {
       await api.post(`/documentos/${id}/rechazar-firma`, {
+        tipo_rechazo: values.tipo_rechazo,
         motivo_rechazo: values.motivo_rechazo,
         password: values.password
       })
@@ -737,32 +746,51 @@ export default function DetalleSolicitud() {
         )}
       </Card>
 
-      {esFuncionario && solicitud.observaciones_generales &&
-      solicitud.estado_actual === 'PENDIENTE_REVISION' && (
+      {esFuncionario && solicitud.observaciones_generales && solicitud.estado_actual === 'PENDIENTE_REVISION' && (
         <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #ff4d4f' }}>
           <Alert
             type="error"
             showIcon
-            message="Esta solicitud tiene una observación de un firmante"
+            message="Esta solicitud fue rechazada por un firmante"
             description={solicitud.observaciones_generales}
             style={{ marginBottom: 16 }}
           />
-          <Space wrap>
-            {/* <Select
+          <div style={{ marginBottom: 16 }}>
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>
+              Tipo de rechazo:
+            </Text>
+            <Select
               value={tipoRechazoActual}
-              onChange={setTipoRechazoActual}
-              style={{ width: 300, marginBottom: 12 }}
+              onChange={async (valor) => {
+                const firmaRechazada = firmas.find(f => f.estado_firma === 'RECHAZADO')
+                if (!firmaRechazada) return
+                try {
+                  await api.put(`/solicitudes/${id}/cambiar-tipo-rechazo`, {
+                    firma_id: firmaRechazada.id,
+                    tipo_rechazo: valor
+                  })
+                  setTipoRechazoActual(valor)
+                  message.success('Tipo de rechazo actualizado')
+                } catch {
+                  message.error('Error al actualizar tipo de rechazo')
+                }
+              }}
+              style={{ width: 350 }}
               options={[
-                { value: 'POR_DOCUMENTOS', label: 'Por documentos —  hay algo incorrecto en los documentos que el aprendiz debe corregir' },
-                { value: 'POR_OTRA_RAZON', label: 'Por otra razón' },
+                { value: 'POR_DOCUMENTOS', label: 'Por documentos — Se enviará enlace de corrección' },
+                { value: 'POR_OTRA_RAZON', label: 'Por otra razón - No se enviará enlace de corrección' },
               ]}
-            /> */}
+            />
+          </div>
+          <Space wrap>
             <Popconfirm
-              title="¿Enviar correo al aprendiz con estas observaciones?"
+              title={tipoRechazoActual === 'POR_OTRA_RAZON'
+                ? "¿Enviar notificación informativa al aprendiz? No se enviará enlace de corrección."
+                : "¿Enviar correo al aprendiz con enlace para corregir su solicitud?"}
               onConfirm={async () => {
                 try {
                   await api.post(`/solicitudes/${id}/enviar-observaciones`)
-                  message.success('Correo enviado al aprendiz')
+                  message.success('Notificación enviada al aprendiz')
                   cargar()
                 } catch (err) {
                   message.error(err.response?.data?.detail ?? 'Error al enviar')
@@ -771,11 +799,13 @@ export default function DetalleSolicitud() {
               okText="Sí" cancelText="No"
             >
               <Button type="primary" danger icon={<ExclamationCircleOutlined />}>
-                Enviar correo al aprendiz
+                {tipoRechazoActual === 'POR_OTRA_RAZON'
+                  ? 'Notificar al aprendiz'
+                  : 'Enviar correo al aprendiz'}
               </Button>
             </Popconfirm>
             <Popconfirm
-              title="¿Quitar las observaciones y confirmar revisión directamente?"
+              title="¿Quitar las observaciones?"
               onConfirm={async () => {
                 try {
                   await api.put(`/solicitudes/${id}/programa`, { observaciones_generales: null })
@@ -792,6 +822,14 @@ export default function DetalleSolicitud() {
               </Button>
             </Popconfirm>
           </Space>
+          {tipoRechazoActual === 'POR_OTRA_RAZON' && (
+            <Alert
+              type="info"
+              showIcon
+              message="Al notificar al aprendiz se le enviará un correo informativo con los datos del firmante que rechazó, sin enlace de corrección."
+              style={{ marginTop: 12 }}
+            />
+          )}
         </Card>
       )}
 
@@ -1145,6 +1183,16 @@ export default function DetalleSolicitud() {
         width={500}
       >
         <Form form={formRechazo} layout="vertical" onFinish={rechazar}>
+          <Form.Item name="tipo_rechazo" label="Tipo de rechazo"
+            rules={[{ required: true, message: 'Selecciona el tipo' }]}>
+            <Select
+              placeholder="Selecciona..."
+              options={[
+                { value: 'POR_DOCUMENTOS', label: 'Por documentos — El aprendiz debe corregir los documentos o datos de la solicitud' },
+                { value: 'POR_OTRA_RAZON', label: 'Por otra razón' },
+              ]}
+            />
+          </Form.Item>
           <Form.Item name="motivo_rechazo" label="Motivo del rechazo"
             rules={[{ required: true, message: 'Ingresa el motivo del rechazo' },
                     { min: 10, message: 'El motivo debe tener al menos 10 caracteres' }]}>

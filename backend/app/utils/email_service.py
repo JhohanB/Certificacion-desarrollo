@@ -128,7 +128,6 @@ async def enviar_observaciones_completas(
     docs_observados: list,
     token: str,
     nombre_funcionario: str = None,
-    correo_funcionario: str = None,
     observaciones_generales: str = None,
     solicitud_id: int = None,
     db=None,
@@ -140,7 +139,6 @@ async def enviar_observaciones_completas(
         docs_observados=docs_observados,
         link_edicion=link_edicion,
         nombre_funcionario=nombre_funcionario,
-        correo_funcionario=correo_funcionario,
         observaciones_generales=observaciones_generales,
     )
     await _enviar(
@@ -166,6 +164,23 @@ async def enviar_certificacion_completada(
         solicitud_id=solicitud_id, tipo_notificacion="CERTIFICACION_COMPLETADA", db=db
     )
 
+
+async def enviar_notificacion_rechazo_externo(
+    correo: str, nombre: str, programa: str,
+    motivo: str, nombre_funcionario_rechazo: str,
+    correo_funcionario_rechazo: str,
+    solicitud_id: int = None, db=None
+) -> None:
+    from app.utils.email_templates import template_notificacion_rechazo_externo
+    html = template_notificacion_rechazo_externo(
+        nombre=nombre, programa=programa, motivo=motivo,
+        nombre_funcionario_rechazo=nombre_funcionario_rechazo,
+        correo_funcionario_rechazo=correo_funcionario_rechazo
+    )
+    await _enviar(
+        correo, "SENA - Notificación sobre tu solicitud", html,
+        solicitud_id=solicitud_id, tipo_notificacion="NOTIFICACION_RECHAZO_EXTERNO", db=db
+    )
 
 # -------------------------------------------------------
 # Correos a funcionarios

@@ -19,6 +19,10 @@ class EstadoFirma(str, Enum):
     FIRMADO = "FIRMADO"
     RECHAZADO = "RECHAZADO"
 
+class TipoRechazo(str, Enum):
+    POR_DOCUMENTOS = "POR_DOCUMENTOS"
+    POR_OTRA_RAZON = "POR_OTRA_RAZON"
+
 
 # -------------------------------------------------------
 # Revisar un documento individual
@@ -52,6 +56,7 @@ class FirmarSolicitud(BaseModel):
 # -------------------------------------------------------
 
 class RechazarFirma(BaseModel):
+    tipo_rechazo: TipoRechazo
     motivo_rechazo: str = Field(min_length=10, max_length=500)
     password: str = Field(min_length=1)
 
@@ -68,6 +73,7 @@ class FirmaOut(BaseModel):
     usuario_id: Optional[int] = None
     nombre_usuario: Optional[str] = None
     estado_firma: EstadoFirma
+    tipo_rechazo: Optional[TipoRechazo] = None
     motivo_rechazo: Optional[str] = None
     fecha_firma: Optional[datetime] = None
 
