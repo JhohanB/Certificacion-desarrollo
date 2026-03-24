@@ -54,9 +54,6 @@ export default function Solicitudes() {
   const tieneAccesoCompleto = esAdmin || esFuncionario
   const puedeDescargar = esAdmin || esFuncionario
 
-  console.log('rolObj:', rolObj)
-  console.log('esAdmin:', esAdmin, 'esFuncionario:', esFuncionario)
-
   const cargar = async () => {
     setCargando(true)
     try {

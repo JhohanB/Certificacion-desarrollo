@@ -301,7 +301,8 @@ export default function DetalleSolicitud() {
         const { data } = await api.get('/usuarios/coordinadores')
         setCoordinadores(data)
       } catch (err) {
-        console.log('error coordinadores:', err.response?.status, err.response?.data)
+        message.error('Error al cargar coordinadores')
+        setCoordinadores([])
       }
     }
     cargarCoordinadores()
