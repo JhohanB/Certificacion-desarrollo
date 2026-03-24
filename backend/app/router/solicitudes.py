@@ -578,7 +578,7 @@ async def confirmar_revision(
             # Reactivar solo firmas rechazadas
             db.execute(sql_text("""
                 UPDATE firmas SET estado_firma = 'PENDIENTE',
-                    fecha_firma = NULL, motivo_rechazo = NULL
+                    fecha_firma = NULL, motivo_rechazo = NULL, tipo_rechazo = NULL
                 WHERE solicitud_id = :id
                 AND estado_firma = 'RECHAZADO'
             """), {"id": solicitud_id})
@@ -650,6 +650,7 @@ def devolver_a_revision(
     db.execute(text("""
         UPDATE firmas SET estado_firma = 'RECHAZADO',
             motivo_rechazo = 'Devuelta a revisión por el funcionario de certificación',
+            tipo_rechazo = NULL,
             fecha_firma = NOW()
         WHERE solicitud_id = :id
         AND estado_firma IN ('PENDIENTE', 'FIRMADO')
@@ -738,3 +739,82 @@ def cambiar_tipo_rechazo(
     })
     db.commit()
     return {"message": "Tipo de rechazo actualizado"}
+
+
+# -------------------------------------------------------
+# Marcar una solicitud como resuelta (bypass del token)
+# -------------------------------------------------------
+
+@router.put("/{solicitud_id}/marcar-corregido")
+def marcar_solicitud_corregida(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(check_permission("solicitudes", "actualizar"))
+):
+    """
+    Permite al funcionario de certificación cambiar el estado de CON_OBSERVACIONES
+    a CORREGIDO cuando hay un rechazo de firma por POR_OTRA_RAZON (sin token de edición).
+    
+    Validaciones:
+    - La solicitud debe estar en estado CON_OBSERVACIONES
+    - Debe existir una firma rechazada con tipo_rechazo = POR_OTRA_RAZON
+    """
+    from sqlalchemy import text
+    
+    solicitud = crud_solicitudes.get_solicitud_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solicitud no encontrada"
+        )
+    
+    # Validar que está en CON_OBSERVACIONES
+    if solicitud["estado_actual"] != "CON_OBSERVACIONES":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"La solicitud no está en estado CON_OBSERVACIONES. Estado actual: {solicitud['estado_actual']}"
+        )
+    
+    # Verificar que existe una firma rechazada con tipo_rechazo = POR_OTRA_RAZON
+    firma_rechazo = db.execute(text("""
+        SELECT id, tipo_rechazo, motivo_rechazo
+        FROM firmas
+        WHERE solicitud_id = :solicitud_id 
+        AND estado_firma = 'RECHAZADO'
+        AND tipo_rechazo = 'POR_OTRA_RAZON'
+        ORDER BY fecha_firma DESC
+        LIMIT 1
+    """), {"solicitud_id": solicitud_id}).mappings().first()
+    
+    if not firma_rechazo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay un rechazo de firma por 'POR_OTRA_RAZON' en esta solicitud"
+        )
+    
+    # Limpiar observaciones_generales al igual que cuando se quitan
+    db.execute(text("""
+        UPDATE solicitudes SET observaciones_generales = NULL
+        WHERE id = :solicitud_id
+    """), {"solicitud_id": solicitud_id})
+    
+    # Limpiar tipo_rechazo de las firmas rechazadas (se resetearán cuando se confirme revisión)
+    db.execute(text("""
+        UPDATE firmas SET tipo_rechazo = NULL
+        WHERE solicitud_id = :solicitud_id 
+        AND estado_firma = 'RECHAZADO'
+    """), {"solicitud_id": solicitud_id})
+    db.commit()
+    
+    # Cambiar estado a CORREGIDO
+    crud_solicitudes.update_estado_solicitud(
+        db, 
+        solicitud_id, 
+        "CORREGIDO",
+        current_user["id"],
+        f"Observación resuelta manualmente por {current_user['nombre_completo']}"
+    )
+    
+    logger.info(f"Solicitud {solicitud_id} marcada como CORREGIDO por {current_user['nombre_completo']}")
+    
+    return {"message": "Solicitud marcada como resuelta. Pasará a revisión nuevamente."}

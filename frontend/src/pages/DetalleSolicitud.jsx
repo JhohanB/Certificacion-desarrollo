@@ -746,7 +746,7 @@ export default function DetalleSolicitud() {
         )}
       </Card>
 
-      {esFuncionario && solicitud.observaciones_generales && solicitud.estado_actual === 'PENDIENTE_REVISION' && (
+      {esFuncionario && solicitud.observaciones_generales && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual !== null && (
         <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #ff4d4f' }}>
           <Alert
             type="error"
@@ -821,7 +821,37 @@ export default function DetalleSolicitud() {
                 Quitar observaciones
               </Button>
             </Popconfirm>
+            
+            {tipoRechazoActual === 'POR_OTRA_RAZON' && solicitud.estado_actual === 'CON_OBSERVACIONES' && (
+              <Popconfirm
+                title="¿Marcar esta solicitud como resuelta?"
+                description="La solicitud pasará a estado CORREGIDO y volverá a PENDIENTE_REVISION para revisión final antes de firmas."
+                onConfirm={async () => {
+                  try {
+                    await api.put(`/solicitudes/${id}/marcar-corregido`)
+                    message.success('Solicitud marcada como resuelta')
+                    cargar()
+                  } catch (err) {
+                    message.error(err.response?.data?.detail ?? 'Error al marcar como resuelto')
+                  }
+                }}
+                okText="Sí" cancelText="No"
+              >
+                <Button type="primary" style={{ background: '#52c41a', borderColor: '#52c41a' }} icon={<CheckCircleOutlined />}>
+                  Resolver observación
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
+          {tipoRechazoActual === 'POR_DOCUMENTOS' && (
+            <Alert
+              type="warning"
+              showIcon
+              message="Rechazo por documentos"
+              description="El firmante rechazó esta solicitud por problemas en los documentos. Debes revisar cuidadosamente las observaciones anteriores y marcar como OBSERVADO los documentos correspondientes. Luego notifica al aprendiz para que los corrija."
+              style={{ marginTop: 12 }}
+            />
+          )}
           {tipoRechazoActual === 'POR_OTRA_RAZON' && (
             <Alert
               type="info"
