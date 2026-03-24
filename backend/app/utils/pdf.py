@@ -2,10 +2,10 @@ import hashlib
 import io
 import logging
 import os
+from datetime import datetime, timezone, timedelta
 from pypdf import PdfWriter, PdfReader
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,9 @@ def generar_pdf_consolidado(solicitud_id: int, documentos: list, upload_dir: str
     # Guardar PDF consolidado
     carpeta = f"{upload_dir}/{solicitud_id}"
     os.makedirs(carpeta, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Usar UTC-5 (Colombia) con timezone offset
+    tz_colombia = timezone(timedelta(hours=-5))
+    timestamp = datetime.now(tz_colombia).strftime("%Y%m%d_%H%M%S")
     ruta_consolidado = f"{carpeta}/consolidado_{timestamp}.pdf"
 
     with open(ruta_consolidado, "wb") as f:

@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import List
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
 from sqlalchemy.orm import Session
@@ -10,7 +11,7 @@ from core.config import settings
 from core.security import verify_password
 from app.schemas.documentos import (
     RevisarDocumento, FirmarSolicitud, RechazarFirma,
-    FirmaOut, EstadoFirma, ReubicarDocumento
+    FirmaOut, ReubicarDocumento
 )
 from app.crud import documentos as crud_docs
 from app.crud import solicitudes as crud_solicitudes
@@ -18,7 +19,6 @@ from app.router.dependencies import check_permission
 from app.utils.email_service import (
     enviar_certificacion_completada,
 )
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,13 @@ def obtener_documentos_para_corregir(token: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Este enlace ya fue utilizado. Contacte al funcionario de certificación si necesita uno nuevo"
         )
+    
+    # Validar que el token no haya expirado (7 días)
+    if crud_docs.validar_token_expirado(db, token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de corrección ha expirado (válido por 7 días). Contáctese con el funcionario para solicitar uno nuevo"
+        )
 
     documentos = crud_docs.get_documentos_observados(db, token_data["solicitud_id"])
     solicitud = crud_solicitudes.get_solicitud_by_id(db, token_data["solicitud_id"])
@@ -145,6 +152,13 @@ async def corregir_documentos(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Este enlace ya fue utilizado"
+        )
+    
+    # Validar que el token no haya expirado (7 días)
+    if crud_docs.validar_token_expirado(db, token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El enlace de corrección ha expirado (válido por 7 días). Debe solicitar uno nuevo"
         )
 
     solicitud_id = token_data["solicitud_id"]
@@ -405,7 +419,9 @@ async def firmar_solicitud(
 
             # Generar PDF con firmas incrustadas
             carpeta_pdf = os.path.dirname(pdf_original)
-            timestamp_firmado = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Usar UTC-5 (Colombia) con timezone offset
+            tz_colombia = timezone(timedelta(hours=-5))
+            timestamp_firmado = datetime.now(tz_colombia).strftime("%Y%m%d_%H%M%S")
             ruta_firmado = f"{carpeta_pdf}/consolidado_firmado_{timestamp_firmado}.pdf"
             ruta_final, hash_final = incrustar_firmas_en_pdf(
                 ruta_pdf_original=pdf_original,
@@ -498,6 +514,20 @@ async def rechazar_firma(
     db.execute(sql_text("""
         UPDATE solicitudes SET observaciones_generales = :motivo WHERE id = :id
     """), {"motivo": motivo_completo, "id": solicitud_id})
+    
+    # Eliminar PDF consolidado del disco (como en devolver-revision)
+    pdf_url = solicitud.get("pdf_consolidado_url")
+    if pdf_url and os.path.exists(pdf_url):
+        os.remove(pdf_url)
+    
+    # Limpiar referencia al PDF en BD
+    db.execute(sql_text("""
+        UPDATE solicitudes
+        SET pdf_consolidado_url = NULL,
+            pdf_hash = NULL,
+            fecha_generacion_pdf = NULL
+        WHERE id = :id
+    """), {"id": solicitud_id})
     db.commit()
 
     # Cambiar estado a PENDIENTE_REVISION sin eliminar PDF ni otras firmas

@@ -746,6 +746,27 @@ export default function DetalleSolicitud() {
         )}
       </Card>
 
+      {esFuncionario && solicitud.observaciones_generales && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual === null && (
+        <Popconfirm
+          title="¿Reenviar las observaciones al aprendiz?"
+          description={solicitud.observaciones_generales}
+          onConfirm={async () => {
+            try {
+              await api.post(`/solicitudes/${id}/reenviar-observaciones`)
+              message.success('Observaciones reenviadas al aprendiz')
+              cargar()
+            } catch (err) {
+              message.error(err.response?.data?.detail ?? 'Error al reenviar observaciones')
+            }
+          }}
+          okText="Sí" cancelText="No"
+        >
+          <Button icon={<ExclamationCircleOutlined />} style={{ background: '#faad14', borderColor: '#faad14', color: '#fff', marginBottom: 16 }}>
+            Reenviar correo
+          </Button>
+        </Popconfirm>
+      )}
+
       {esFuncionario && solicitud.observaciones_generales && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual !== null && (
         <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #ff4d4f' }}>
           <Alert
@@ -819,6 +840,25 @@ export default function DetalleSolicitud() {
             >
               <Button icon={<CheckCircleOutlined />}>
                 Quitar observaciones
+              </Button>
+            </Popconfirm>
+            
+            <Popconfirm
+              title="¿Reenviar las observaciones al aprendiz?"
+              description="Se enviará nuevamente el correo con las observaciones. Si es por documentos, se generará un nuevo enlace de edición."
+              onConfirm={async () => {
+                try {
+                  await api.post(`/solicitudes/${id}/reenviar-observaciones`)
+                  message.success('Observaciones reenviadas al aprendiz')
+                  cargar()
+                } catch (err) {
+                  message.error(err.response?.data?.detail ?? 'Error al reenviar observaciones')
+                }
+              }}
+              okText="Sí" cancelText="No"
+            >
+              <Button icon={<ExclamationCircleOutlined />} style={{ background: '#faad14', borderColor: '#faad14', color: '#fff' }}>
+                Reenviar observaciones
               </Button>
             </Popconfirm>
             

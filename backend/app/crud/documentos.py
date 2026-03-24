@@ -124,10 +124,11 @@ def create_token_edicion(db: Session, solicitud_id: int, token: str) -> None:
         """)
         db.execute(query_invalidar, {"solicitud_id": solicitud_id})
 
-        # Crear nuevo token
+        # Crear nuevo token con expiración de 1 semana
+        # NOW() ya usa timezone de Colombia (configurado en sesión MySQL)
         query = text("""
-            INSERT INTO tokens_edicion (solicitud_id, token, usado)
-            VALUES (:solicitud_id, :token, FALSE)
+            INSERT INTO tokens_edicion (solicitud_id, token, usado, fecha_expiracion)
+            VALUES (:solicitud_id, :token, FALSE, DATE_ADD(NOW(), INTERVAL 7 DAY))
         """)
         db.execute(query, {"solicitud_id": solicitud_id, "token": token})
         db.commit()
@@ -141,7 +142,7 @@ def get_token_edicion(db: Session, token: str) -> Optional[dict]:
     """Obtiene un token de edición por su valor."""
     try:
         query = text("""
-            SELECT id, solicitud_id, token, usado, fecha_creacion
+            SELECT id, solicitud_id, token, usado, fecha_creacion, fecha_expiracion
             FROM tokens_edicion
             WHERE token = :token
         """)
@@ -179,6 +180,36 @@ def get_token_activo_solicitud(db: Session, solicitud_id: int) -> Optional[dict]
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener token activo: {e}")
         raise
+
+
+def validar_token_expirado(db: Session, token: str) -> bool:
+    """
+    Valida si un token de edición ha expirado (más de 7 días).
+    Usa zona horaria de Colombia (UTC-5) para la comparación.
+    Retorna True si está expirado, False si aún es válido.
+    """
+    try:
+        # NOW() ya usa timezone de Colombia (configurado en sesión MySQL)
+        query = text("""
+            SELECT 
+                NOW() as hora_actual,
+                fecha_expiracion
+            FROM tokens_edicion
+            WHERE token = :token
+        """)
+        result = db.execute(query, {"token": token}).mappings().first()
+        
+        if not result or not result["fecha_expiracion"]:
+            return False
+        
+        hora_actual = result["hora_actual"]
+        fecha_exp = result["fecha_expiracion"]
+        
+        # Comparar directamente: si hora_actual > fecha_expiracion, está expirado
+        return hora_actual > fecha_exp
+    except Exception as e:
+        logger.error(f"Error al validar expiración de token: {e}")
+        return False
 
 
 # -------------------------------------------------------

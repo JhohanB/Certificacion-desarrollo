@@ -29,6 +29,8 @@ def get_db() -> Generator:
     """
     Dependencia para obtener una sesión de base de datos en FastAPI.
     Se usa en todos los endpoints como Depends(get_db).
+    
+    Configura automáticamente la zona horaria de Colombia para todos los queries.
 
     Yields:
         Session: Sesión de SQLAlchemy para interactuar con la base de datos.
@@ -40,6 +42,9 @@ def get_db() -> Generator:
     """
     db = SessionLocal()
     try:
+        # Configurar timezone de Colombia (UTC-5) para esta sesión
+        # Usando offset en lugar de nombre de zona horaria para compatibilidad
+        db.execute(text("SET time_zone = '-05:00'"))
         yield db
     except SQLAlchemyError as e:
         db.rollback()
