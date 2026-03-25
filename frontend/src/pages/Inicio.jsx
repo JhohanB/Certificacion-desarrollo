@@ -49,7 +49,7 @@ export default function Inicio() {
           Sistema de Certificación
         </Title>
         <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 16 }}>
-          Servicio Nacional de Aprendizaje — SENA
+          Centro Atención Sector Agropecuario
         </Text>
       </div>
 

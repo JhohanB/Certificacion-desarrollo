@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Steps, Form, Input, Select, Button, Typography, Card, Alert, Result, Tag } from 'antd'
 import {
   ArrowLeftOutlined, ArrowRightOutlined, SendOutlined,
-  FilePdfOutlined, CheckCircleFilled, DeleteOutlined, InboxOutlined
+  FilePdfOutlined, CheckCircleFilled, DeleteOutlined
 } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/axios'

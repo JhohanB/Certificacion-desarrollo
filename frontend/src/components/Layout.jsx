@@ -4,7 +4,7 @@ import {
   DashboardOutlined, FileTextOutlined, UserOutlined,
   TeamOutlined, SettingOutlined, AuditOutlined,
   BarChartOutlined, LogoutOutlined, MenuOutlined,
-  BellOutlined, KeyOutlined
+  KeyOutlined
 } from '@ant-design/icons'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -57,7 +57,7 @@ export default function AppLayout() {
       label: 'Configuración',
       children: [
         esAdminActivo && { key: '/configuracion/roles', label: 'Roles y Permisos' },
-        esAdminActivo && { key: '/configuracion/programas', label: 'Tipos de Programa' },
+        esAdminActivo && { key: '/configuracion/programas', label: 'Niveles de Formación' },
         { key: '/configuracion/plantillas', label: 'Plantillas' },
       ].filter(Boolean)
     },
