@@ -268,8 +268,8 @@ export default function CorregirSolicitud() {
         {/* Paso 2 — Datos del programa */}
         {pasoActual === 1 && (
           <Form form={form2} layout="vertical">
-            <Form.Item name="tipo_programa_id" label="Tipo de programa"
-              rules={[{ required: true, message: 'Selecciona el tipo de programa' }]}>
+            <Form.Item name="tipo_programa_id" label="Nivel de formación"
+              rules={[{ required: true, message: 'Selecciona el nivel de formación' }]}>
               <Select
                 placeholder="Selecciona..."
                 size="large"

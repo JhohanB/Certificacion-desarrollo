@@ -61,7 +61,7 @@ function DashboardAdmin({ data }) {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Por tipo de programa" style={{ borderRadius: 12 }}>
+          <Card title="Por nivel de formación" style={{ borderRadius: 12 }}>
             {data?.por_tipo_programa?.map((t, i) => (
               <div key={i} style={{
                 display: 'flex', justifyContent: 'space-between',
@@ -101,7 +101,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
   const columnas = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     {
       title: 'Días esperando',
       dataIndex: 'dias_esperando',
@@ -235,7 +235,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
   const columnas = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     {
       title: 'Días esperando',
       dataIndex: 'dias_esperando',
@@ -258,7 +258,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
   const columnasRechazos = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     { title: 'Motivo', dataIndex: 'motivo_rechazo', key: 'motivo_rechazo' },
     {
       title: 'Fecha',
@@ -354,7 +354,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
   const columnas = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     {
       title: 'Días esperando',
       dataIndex: 'dias_esperando',
@@ -377,7 +377,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
   const columnasRechazos = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     { title: 'Motivo', dataIndex: 'motivo_rechazo', key: 'motivo_rechazo' },
     {
       title: 'Fecha',

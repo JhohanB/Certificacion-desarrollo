@@ -105,8 +105,8 @@ export default function Reportes() {
         TEXTOS_ESTADO[e.estado_actual] ?? e.estado_actual, e.total
       ]) ?? []),
       [],
-      ['Por Tipo de Programa'],
-      ['Tipo', 'Total', 'Certificadas'],
+      ['Por nivel de formación'],
+      ['Nivel', 'Total', 'Certificadas'],
       ...(resumen?.por_tipo_programa?.map(t => [t.tipo_programa, t.total, t.certificadas]) ?? []),
       [],
       ['Total solicitudes', resumen?.total_solicitudes ?? 0],
@@ -125,7 +125,7 @@ export default function Reportes() {
       ['Con observaciones', periodo?.resumen?.con_observaciones ?? 0],
       ['Pendientes revisión', periodo?.resumen?.pendientes_revision ?? 0],
       [],
-      ['Aprendiz', 'Documento', 'Programa', 'Tipo', 'Estado', 'Fecha solicitud', 'Fecha certificación'],
+      ['Aprendiz', 'Documento', 'Programa', 'Nivel de formación', 'Estado', 'Fecha solicitud', 'Fecha certificación'],
       ...(periodo?.solicitudes?.map(s => [
         s.nombre_aprendiz,
         s.numero_documento,
@@ -243,10 +243,10 @@ export default function Reportes() {
     })
 
     let y = doc.lastAutoTable.finalY + 10
-    titulo('Por Tipo de Programa', y)
+    titulo('Por nivel de formación', y)
     autoTable(doc, {
       startY: y + 5,
-      head: [['Tipo', 'Total', 'Certificadas']],
+      head: [['Nivel de formación', 'Total', 'Certificadas']],
       body: resumen?.por_tipo_programa?.map(t => [t.tipo_programa, t.total, t.certificadas]) ?? [],
       headStyles: { fillColor: [0, 74, 47] }
     })
@@ -259,7 +259,7 @@ export default function Reportes() {
     doc.text(`Total: ${periodo?.resumen?.total ?? 0}  |  Certificadas: ${periodo?.resumen?.certificadas ?? 0}  |  Con obs.: ${periodo?.resumen?.con_observaciones ?? 0}`, 14, 23)
     autoTable(doc, {
       startY: 28,
-      head: [['Aprendiz', 'Programa', 'Tipo', 'Estado', 'Fecha']],
+      head: [['Aprendiz', 'Programa', 'Nivel de formación', 'Estado', 'Fecha']],
       body: periodo?.solicitudes?.map(s => [
         s.nombre_aprendiz,
         s.nombre_programa,
@@ -380,7 +380,7 @@ export default function Reportes() {
   const columnasSolicitudes = [
     { title: 'Aprendiz', dataIndex: 'nombre_aprendiz', key: 'nombre_aprendiz' },
     { title: 'Programa', dataIndex: 'nombre_programa', key: 'nombre_programa' },
-    { title: 'Tipo', dataIndex: 'tipo_programa', key: 'tipo_programa' },
+    { title: 'Nivel de formación', dataIndex: 'tipo_programa', key: 'tipo_programa' },
     { title: 'Estado', dataIndex: 'estado_actual', key: 'estado_actual',
       render: (e) => <Tag color={COLORES_ESTADO[e]}>{TEXTOS_ESTADO[e]}</Tag> },
     { title: 'Fecha', dataIndex: 'fecha_solicitud', key: 'fecha_solicitud',
@@ -465,7 +465,7 @@ export default function Reportes() {
               </Card>
             </Col>
             <Col xs={24} lg={12}>
-              <Card title="Por tipo de programa" style={{ borderRadius: 12 }}>
+              <Card title="Por nivel de formación" style={{ borderRadius: 12 }}>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={dataTipos}>
                     <CartesianGrid strokeDasharray="3 3" />

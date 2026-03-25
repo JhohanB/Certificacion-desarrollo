@@ -14,8 +14,8 @@ const TIPOS_DOCUMENTO = [
   { value: 'CE', label: 'Cédula de Extranjería' },
   { value: 'TI', label: 'Tarjeta de Identidad' },
   { value: 'PA', label: 'Pasaporte' },
-  { value: 'PEP', label: 'Permiso Especial de Permanencia' },
-  { value: 'PPT', label: 'Permiso de Protección Temporal' },
+  { value: 'PEP', label: 'PEP - Permiso Especial de Permanencia' },
+  { value: 'PPT', label: 'PPT - Permiso de Protección Temporal' },
 ]
 
 export default function NuevaSolicitud() {
@@ -39,7 +39,7 @@ export default function NuevaSolicitud() {
         const { data } = await api.get('/solicitudes/tipos-programa')
         setTiposPrograma(data)
       } catch {
-        setError('No se pudieron cargar los tipos de programa')
+        setError('No se pudieron cargar los niveles de formación')
       }
     }
     cargar()
@@ -255,8 +255,8 @@ export default function NuevaSolicitud() {
         {/* Paso 2 */}
         {pasoActual === 1 && (
           <Form form={form2} layout="vertical">
-            <Form.Item name="tipo_programa_id" label="Tipo de programa"
-              rules={[{ required: true, message: 'Selecciona el tipo de programa' }]}>
+            <Form.Item name="tipo_programa_id" label="Nivel de Formación"
+              rules={[{ required: true, message: 'Selecciona el nivel de formación' }]}>
               <Select
                 placeholder="Selecciona..."
                 size="large"
@@ -279,7 +279,7 @@ export default function NuevaSolicitud() {
         {pasoActual === 2 && (
           <div>
             {documentosRequeridos.length === 0 ? (
-              <Alert message="No se encontraron documentos para este tipo de programa" type="warning" showIcon />
+              <Alert message="No se encontraron documentos para este nivel de formación" type="warning" showIcon />
             ) : (
               documentosRequeridos.map(doc => {
                 const archivoSubido = archivos[doc.id]

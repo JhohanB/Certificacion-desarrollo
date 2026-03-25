@@ -254,7 +254,7 @@ export default function TiposPrograma() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}>Tipos de Programa</Title>
+        <Title level={4} style={{ margin: 0 }}>Niveles de Formación</Title>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
           <Button
@@ -262,7 +262,7 @@ export default function TiposPrograma() {
             onClick={() => setModalCrear(true)}
             style={{ background: '#004A2F', borderColor: '#004A2F' }}
           >
-            Nuevo tipo
+            Nuevo nivel de formación
           </Button>
         </Space>
       </div>
@@ -272,12 +272,12 @@ export default function TiposPrograma() {
           dataSource={tipos} columns={columnas} rowKey="id"
           loading={cargando} scroll={{ x: 700 }}
           pagination={{ pageSize: 10 }}
-          locale={{ emptyText: 'No hay tipos de programa' }}
+          locale={{ emptyText: 'No hay niveles de formación' }}
         />
       </Card>
 
       {/* Modal Crear */}
-      <Modal title="Nuevo tipo de programa" open={modalCrear}
+      <Modal title="Nuevo nivel de formación" open={modalCrear}
         onCancel={() => { setModalCrear(false); formCrear.resetFields() }}
         footer={null}>
         <Form form={formCrear} layout="vertical" onFinish={crearTipo}>
@@ -299,7 +299,7 @@ export default function TiposPrograma() {
       </Modal>
 
       {/* Modal Editar */}
-      <Modal title="Editar tipo de programa" open={modalEditar}
+      <Modal title="Editar nivel de formación" open={modalEditar}
         onCancel={() => setModalEditar(false)} footer={null}>
         <Form form={formEditar} layout="vertical" onFinish={editarTipo}>
           <Form.Item name="nombre" label="Nombre"

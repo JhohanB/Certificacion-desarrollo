@@ -728,7 +728,7 @@ export default function DetalleSolicitud() {
           <Descriptions.Item label="Correo">{solicitud.correo_aprendiz}</Descriptions.Item>
           <Descriptions.Item label="Teléfono">{solicitud.telefono_aprendiz || '—'}</Descriptions.Item>
           <Descriptions.Item label="Programa">{solicitud.nombre_programa}</Descriptions.Item>
-          <Descriptions.Item label="Tipo">{solicitud.nombre_tipo_programa}</Descriptions.Item>
+          <Descriptions.Item label="Nivel de formación">{solicitud.nombre_tipo_programa}</Descriptions.Item>
           <Descriptions.Item label="Ficha">{solicitud.numero_ficha}</Descriptions.Item>
           <Descriptions.Item label="Fecha solicitud">
             {new Date(solicitud.fecha_solicitud).toLocaleDateString('es-CO')}

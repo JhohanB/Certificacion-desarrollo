@@ -258,7 +258,7 @@ export default function Solicitudes() {
             onClick={() => setAgrupar(!agrupar)}
             style={agrupar ? { background: '#004A2F', borderColor: '#004A2F' } : {}}
           >
-            {agrupar ? 'Agrupado por tipo' : 'Agrupar por tipo'}
+            {agrupar ? 'Agrupado por Nivel de Formación' : 'Agrupar por Nivel de Formación'}
           </Button>
         </Space>
       </Card>
