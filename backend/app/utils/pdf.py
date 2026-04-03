@@ -133,6 +133,11 @@ def incrustar_firmas_en_pdf(
 
                     # Calcular escala manteniendo proporción
                     escala = min(ancho / img_w, alto / img_h)
+
+                    # Forzar uso de más espacio si queda muy pequeña
+                    if escala < 0.8:
+                        escala = escala * 1.5
+                        
                     ancho_real = img_w * escala
                     alto_real = img_h * escala
 

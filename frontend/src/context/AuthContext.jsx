@@ -8,7 +8,12 @@ export function AuthProvider({ children }) {
   const [rolActivo, setRolActivo] = useState(null)
   const [cargando, setCargando] = useState(true)
 
+  const hasFetched = useRef(false)
+
   useEffect(() => {
+    if (hasFetched.current) return
+    hasFetched.current = true
+
     const token = sessionStorage.getItem('access_token')
     const usuarioGuardado = sessionStorage.getItem('usuario')
     const rolGuardado = sessionStorage.getItem('rol_activo')
@@ -18,7 +23,6 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Recargar datos frescos del usuario desde el backend
     api.get('/auth/me')
       .then(({ data }) => {
         sessionStorage.setItem('usuario', JSON.stringify(data))
@@ -26,14 +30,12 @@ export function AuthProvider({ children }) {
 
         if (rolGuardado) {
           const rolParsed = JSON.parse(rolGuardado)
-          // Enriquecer con datos frescos
           const rolCompleto = data.roles?.find(r => r.id === rolParsed.id) ?? rolParsed
           sessionStorage.setItem('rol_activo', JSON.stringify(rolCompleto))
           setRolActivo(rolCompleto)
         }
       })
       .catch(() => {
-        // Token inválido — limpiar sesión
         sessionStorage.clear()
       })
       .finally(() => {

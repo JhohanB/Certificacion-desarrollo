@@ -43,9 +43,11 @@ def login(datos: LoginRequest, db: Session = Depends(get_db)):
             detail="Usuario inactivo, contacte al administrador"
         )
 
+    estado = crud_auth.get_estado_bloqueo(db, usuario["id"])
+    
     # Verificar si está bloqueado
-    if crud_auth.esta_bloqueado(db, usuario["id"]):
-        minutos = crud_auth.get_minutos_restantes_bloqueo(db, usuario["id"])
+    if crud_auth.esta_bloqueado(estado):
+        minutos = crud_auth.get_minutos_restantes_bloqueo(estado)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Usuario bloqueado por demasiados intentos fallidos. Intente de nuevo en {minutos} minuto(s)"
@@ -54,8 +56,7 @@ def login(datos: LoginRequest, db: Session = Depends(get_db)):
     # Verificar contraseña
     if not verify_password(datos.password, usuario["password_hash"]):
         intentos = crud_auth.registrar_intento_fallido(db, usuario["id"])
-        registrar(db, "LOGIN_FALLIDO", "usuarios", usuario["id"],
-                  f"Login fallido - contraseña incorrecta. Intento {intentos}/5")
+        registrar(db, "LOGIN_FALLIDO", "usuarios", usuario["id"], f"Login fallido - contraseña incorrecta. Intento {intentos}/5")
 
         restantes = max(0, 5 - intentos)
         if restantes == 0:
@@ -76,8 +77,7 @@ def login(datos: LoginRequest, db: Session = Depends(get_db)):
     refresh_token = create_refresh_token()
     crud_auth.crear_refresh_token(db, usuario["id"], refresh_token)
 
-    registrar(db, "LOGIN_EXITOSO", "usuarios", usuario["id"],
-              f"Login exitoso: {usuario['correo']}")
+    registrar(db, "LOGIN_EXITOSO", "usuarios", usuario["id"], f"Login exitoso: {usuario['correo']}")
 
     return LoginResponse(
         access_token=access_token,

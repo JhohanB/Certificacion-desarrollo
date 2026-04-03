@@ -46,6 +46,7 @@ def get_db() -> Generator:
         # Usando offset en lugar de nombre de zona horaria para compatibilidad
         db.execute(text("SET time_zone = '-05:00'"))
         yield db
+        db.commit()
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error de base de datos: {str(e)}")

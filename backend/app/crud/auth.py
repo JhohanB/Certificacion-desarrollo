@@ -29,11 +29,10 @@ def get_estado_bloqueo(db: Session, usuario_id: int) -> dict:
         raise
 
 
-def esta_bloqueado(db: Session, usuario_id: int) -> bool:
+def esta_bloqueado(estado: dict) -> bool:
     """Verifica si el usuario está bloqueado por intentos fallidos."""
     try:
-        estado = get_estado_bloqueo(db, usuario_id)
-        if not estado or not estado["bloqueado_hasta"]:
+        if not estado or not estado.get("bloqueado_hasta"):
             return False
         ahora = datetime.now(tz=timezone.utc).replace(tzinfo=None)
         return estado["bloqueado_hasta"] > ahora
@@ -42,11 +41,10 @@ def esta_bloqueado(db: Session, usuario_id: int) -> bool:
         raise
 
 
-def get_minutos_restantes_bloqueo(db: Session, usuario_id: int) -> int:
+def get_minutos_restantes_bloqueo(estado: dict) -> int:
     """Devuelve los minutos restantes de bloqueo."""
     try:
-        estado = get_estado_bloqueo(db, usuario_id)
-        if not estado or not estado["bloqueado_hasta"]:
+        if not estado or not estado.get("bloqueado_hasta"):
             return 0
         ahora = datetime.now(tz=timezone.utc).replace(tzinfo=None)
         diff = estado["bloqueado_hasta"] - ahora
@@ -57,31 +55,31 @@ def get_minutos_restantes_bloqueo(db: Session, usuario_id: int) -> int:
 
 
 def registrar_intento_fallido(db: Session, usuario_id: int) -> int:
-    """
-    Incrementa el contador de intentos fallidos.
-    Si llega a MAX_INTENTOS bloquea al usuario por BLOQUEO_MINUTOS minutos.
-    Devuelve el número de intentos actuales.
-    """
     try:
-        estado = get_estado_bloqueo(db, usuario_id)
-        intentos = (estado["intentos_fallidos"] or 0) + 1
+        query = text("""
+            UPDATE usuarios
+            SET 
+                intentos_fallidos = intentos_fallidos + 1,
+                bloqueado_hasta = CASE 
+                    WHEN intentos_fallidos + 1 >= :max_intentos 
+                    THEN :bloqueado_hasta
+                    ELSE bloqueado_hasta
+                END
+            WHERE id = :id
+        """)
 
-        if intentos >= MAX_INTENTOS:
-            bloqueado_hasta = datetime.now(tz=timezone.utc).replace(tzinfo=None) + timedelta(minutes=BLOQUEO_MINUTOS)
-            query = text("""
-                UPDATE usuarios
-                SET intentos_fallidos = :intentos, bloqueado_hasta = :bloqueado_hasta
-                WHERE id = :id
-            """)
-            db.execute(query, {"intentos": intentos, "bloqueado_hasta": bloqueado_hasta, "id": usuario_id})
-        else:
-            query = text("""
-                UPDATE usuarios SET intentos_fallidos = :intentos WHERE id = :id
-            """)
-            db.execute(query, {"intentos": intentos, "id": usuario_id})
+        bloqueado_hasta = datetime.now(tz=timezone.utc).replace(tzinfo=None) + timedelta(minutes=BLOQUEO_MINUTOS)
 
+        db.execute(query, {
+            "id": usuario_id,
+            "max_intentos": MAX_INTENTOS,
+            "bloqueado_hasta": bloqueado_hasta
+        })
         db.commit()
-        return intentos
+
+        estado = get_estado_bloqueo(db, usuario_id)
+        return estado["intentos_fallidos"]
+
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error al registrar intento fallido: {e}")
@@ -89,12 +87,12 @@ def registrar_intento_fallido(db: Session, usuario_id: int) -> int:
 
 
 def resetear_intentos_fallidos(db: Session, usuario_id: int) -> None:
-    """Resetea el contador de intentos fallidos al hacer login exitoso."""
     try:
         query = text("""
             UPDATE usuarios
             SET intentos_fallidos = 0, bloqueado_hasta = NULL
             WHERE id = :id
+            AND intentos_fallidos > 0
         """)
         db.execute(query, {"id": usuario_id})
         db.commit()
@@ -140,7 +138,7 @@ def get_refresh_token(db: Session, token: str) -> Optional[dict]:
 def revocar_refresh_token(db: Session, token: str) -> None:
     """Revoca un refresh token específico."""
     try:
-        query = text("UPDATE refresh_tokens SET revocado = TRUE WHERE token = :token")
+        query = text("UPDATE refresh_tokens SET revocado = TRUE WHERE token = :token AND revocado = FALSE")
         db.execute(query, {"token": token})
         db.commit()
     except SQLAlchemyError as e:
@@ -152,7 +150,7 @@ def revocar_refresh_token(db: Session, token: str) -> None:
 def revocar_todos_refresh_tokens(db: Session, usuario_id: int) -> None:
     """Revoca todos los refresh tokens de un usuario. Se usa al cambiar contraseña."""
     try:
-        query = text("UPDATE refresh_tokens SET revocado = TRUE WHERE usuario_id = :usuario_id")
+        query = text("UPDATE refresh_tokens SET revocado = TRUE WHERE usuario_id = :usuario_id AND revocado = FALSE")
         db.execute(query, {"usuario_id": usuario_id})
         db.commit()
     except SQLAlchemyError as e:

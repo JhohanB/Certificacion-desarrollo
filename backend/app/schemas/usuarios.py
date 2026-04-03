@@ -61,6 +61,9 @@ class RolOut(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
     requiere_firma: bool
+    es_coordinador: bool = False
+    es_funcionario_revision: bool = False
+    es_admin: bool = False
 
     class Config:
         from_attributes = True

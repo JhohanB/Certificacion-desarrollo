@@ -259,10 +259,20 @@ def subir_firma(
     contenido = archivo.file.read()
 
     try:
-        from PIL import Image
+        from PIL import Image, ImageChops
         import io
 
         img = Image.open(io.BytesIO(contenido)).convert("RGBA")
+
+        # Crear fondo blanco
+        bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
+
+        # Detectar diferencia
+        diff = ImageChops.difference(img, bg)
+        bbox = diff.getbbox()
+
+        if bbox:
+            img = img.crop(bbox)
 
         # Hacer transparente el fondo blanco/claro
         datos = img.getdata()
