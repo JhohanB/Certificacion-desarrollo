@@ -85,15 +85,33 @@ def get_usuario_by_id(db: Session, usuario_id: int) -> Optional[dict]:
                 u.id, u.documento, u.nombre_completo, u.correo, u.telefono,
                 u.firma_registrada, u.firma_url, u.activo,
                 u.debe_cambiar_password, u.debe_registrar_firma,
-                u.created_at
+                u.created_at,
+                r.id AS rol_id, r.nombre AS rol_nombre, r.descripcion AS rol_descripcion,
+                r.requiere_firma, r.es_coordinador, r.es_funcionario_revision, r.es_admin
             FROM usuarios u
+            LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id AND ur.activo = TRUE
+            LEFT JOIN roles r ON ur.rol_id = r.id
             WHERE u.id = :usuario_id
+            ORDER BY r.nombre ASC
         """)
-        usuario = db.execute(query, {"usuario_id": usuario_id}).mappings().first()
-        if not usuario:
+        rows = db.execute(query, {"usuario_id": usuario_id}).mappings().all()
+        if not rows:
             return None
 
-        roles = get_roles_by_usuario(db, usuario_id)
+        usuario = rows[0]
+        roles = []
+        for row in rows:
+            if row["rol_id"] is not None:
+                roles.append({
+                    "id": row["rol_id"],
+                    "nombre": row["rol_nombre"],
+                    "descripcion": row["rol_descripcion"],
+                    "requiere_firma": row["requiere_firma"],
+                    "es_coordinador": row["es_coordinador"],
+                    "es_funcionario_revision": row["es_funcionario_revision"],
+                    "es_admin": row["es_admin"]
+                })
+
         return {**dict(usuario), "roles": roles}
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener usuario por ID: {e}")
@@ -111,22 +129,40 @@ def get_usuario_by_correo(db: Session, correo: str) -> Optional[dict]:
                 u.id, u.documento, u.nombre_completo, u.correo, u.telefono,
                 u.password_hash, u.firma_registrada, u.firma_url,
                 u.activo, u.debe_cambiar_password, u.debe_registrar_firma,
-                u.created_at
+                u.created_at,
+                r.id AS rol_id, r.nombre AS rol_nombre, r.descripcion AS rol_descripcion,
+                r.requiere_firma, r.es_coordinador, r.es_funcionario_revision, r.es_admin
             FROM usuarios u
+            LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id AND ur.activo = TRUE
+            LEFT JOIN roles r ON ur.rol_id = r.id
             WHERE u.correo = :correo
+            ORDER BY r.nombre ASC
         """)
-        usuario = db.execute(query, {"correo": correo}).mappings().first()
-        if not usuario:
+        rows = db.execute(query, {"correo": correo}).mappings().all()
+        if not rows:
             return None
 
-        roles = get_roles_by_usuario(db, usuario["id"])
+        usuario = rows[0]
+        roles = []
+        for row in rows:
+            if row["rol_id"] is not None:
+                roles.append({
+                    "id": row["rol_id"],
+                    "nombre": row["rol_nombre"],
+                    "descripcion": row["rol_descripcion"],
+                    "requiere_firma": row["requiere_firma"],
+                    "es_coordinador": row["es_coordinador"],
+                    "es_funcionario_revision": row["es_funcionario_revision"],
+                    "es_admin": row["es_admin"]
+                })
+
         return {**dict(usuario), "roles": roles}
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener usuario por correo: {e}")
         raise
 
 
-def get_all_usuarios(db: Session) -> list:
+def get_all_usuarios(db: Session, page: int = 1, limit: int = 50) -> list:
     """
     Obtiene todos los funcionarios con sus roles.
     """
@@ -135,17 +171,53 @@ def get_all_usuarios(db: Session) -> list:
             SELECT
                 u.id, u.documento, u.nombre_completo, u.correo, u.telefono,
                 u.firma_registrada, u.activo, u.debe_cambiar_password,
-                u.debe_registrar_firma, u.created_at
-            FROM usuarios u
-            ORDER BY u.nombre_completo ASC
+                u.debe_registrar_firma, u.created_at,
+                r.id as rol_id, r.nombre as rol_nombre, r.descripcion as rol_descripcion,
+                r.requiere_firma, r.es_coordinador, r.es_funcionario_revision, r.es_admin
+            FROM (
+                SELECT id, documento, nombre_completo, correo, telefono,
+                    firma_registrada, activo, debe_cambiar_password,
+                    debe_registrar_firma, created_at
+                FROM usuarios
+                ORDER BY nombre_completo ASC
+                LIMIT :limit OFFSET :offset
+            ) u
+            LEFT JOIN usuario_roles ur ON u.id = ur.usuario_id AND ur.activo = TRUE
+            LEFT JOIN roles r ON ur.rol_id = r.id
+            ORDER BY u.nombre_completo ASC, r.nombre ASC
         """)
-        usuarios = db.execute(query).mappings().all()
+        rows = db.execute(query, {"limit": limit, "offset": (page - 1) * limit}).mappings().all()
 
-        resultado = []
-        for usuario in usuarios:
-            roles = get_roles_by_usuario(db, usuario["id"])
-            resultado.append({**dict(usuario), "roles": roles})
-        return resultado
+        # Agrupar en Python
+        usuarios_dict = {}
+        for row in rows:
+            user_id = row["id"]
+            if user_id not in usuarios_dict:
+                usuarios_dict[user_id] = {
+                    "id": row["id"],
+                    "documento": row["documento"],
+                    "nombre_completo": row["nombre_completo"],
+                    "correo": row["correo"],
+                    "telefono": row["telefono"],
+                    "firma_registrada": row["firma_registrada"],
+                    "activo": row["activo"],
+                    "debe_cambiar_password": row["debe_cambiar_password"],
+                    "debe_registrar_firma": row["debe_registrar_firma"],
+                    "created_at": row["created_at"],
+                    "roles": []
+                }
+            if row["rol_id"]:  # Solo agregar si hay rol
+                usuarios_dict[user_id]["roles"].append({
+                    "id": row["rol_id"],
+                    "nombre": row["rol_nombre"],
+                    "descripcion": row["rol_descripcion"],
+                    "requiere_firma": row["requiere_firma"],
+                    "es_coordinador": row["es_coordinador"],
+                    "es_funcionario_revision": row["es_funcionario_revision"],
+                    "es_admin": row["es_admin"]
+                })
+
+        return list(usuarios_dict.values())
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener usuarios: {e}")
         raise

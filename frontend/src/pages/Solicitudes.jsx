@@ -42,6 +42,7 @@ export default function Solicitudes() {
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
   const [orden, setOrden] = useState('desc')
   const [agrupar, setAgrupar] = useState(false)
+  const [pagina, setPagina] = useState(1)
   const navigate = useNavigate()
   const { usuario, rolActivo } = useAuth()
 
@@ -69,6 +70,7 @@ export default function Solicitudes() {
   }
 
   useEffect(() => { cargar() }, [filtroEstado])
+  useEffect(() => { setPagina(1) }, [filtroBusqueda, filtroEstado, orden, agrupar])
 
   const solicitudesFiltradas = solicitudes
     .filter(s => {
@@ -285,7 +287,12 @@ export default function Solicitudes() {
             rowKey="id"
             loading={cargando}
             scroll={{ x: 800 }}
-            pagination={{ pageSize: 10, showTotal: (total) => `${total} solicitudes` }}
+            pagination={{
+              current: pagina,
+              pageSize: 10,
+              onChange: setPagina,
+              showTotal: (total) => `${total} solicitudes`
+            }}
             locale={{ emptyText: 'No hay solicitudes' }}
           />
         )}

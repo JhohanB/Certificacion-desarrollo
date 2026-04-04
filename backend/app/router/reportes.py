@@ -465,12 +465,15 @@ def reporte_dashboard(
         por_tipo = db.execute(query_tipos).mappings().all()
 
         query_tiempo = text("""
-            SELECT ROUND(AVG(DATEDIFF(
-                (SELECT fecha_cambio FROM estados_historial
-                 WHERE solicitud_id = s.id AND estado_nuevo = 'CERTIFICADO' LIMIT 1),
-                s.fecha_solicitud
-            )), 1) AS dias_promedio
-            FROM solicitudes s WHERE s.estado_actual = 'CERTIFICADO'
+            SELECT ROUND(AVG(DATEDIFF(eh.fecha_cambio, s.fecha_solicitud)), 1) AS dias_promedio
+            FROM solicitudes s
+            INNER JOIN (
+                SELECT solicitud_id, MIN(fecha_cambio) AS fecha_cambio
+                FROM estados_historial
+                WHERE estado_nuevo = 'CERTIFICADO'
+                GROUP BY solicitud_id
+            ) eh ON eh.solicitud_id = s.id
+            WHERE s.estado_actual = 'CERTIFICADO'
         """)
         tiempo = db.execute(query_tiempo).mappings().first()
 

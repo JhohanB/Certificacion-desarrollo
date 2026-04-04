@@ -1,0 +1,67 @@
+-- Optimizaciones adicionales para el dashboard
+-- Ejecutar después de los índices principales
+
+-- Vista materializada para estadísticas rápidas (opcional pero recomendado)
+-- DROP VIEW IF EXISTS dashboard_stats;
+-- CREATE VIEW dashboard_stats AS
+-- SELECT
+--     s.estado_actual,
+--     COUNT(*) as total,
+--     COUNT(CASE WHEN DATE(s.fecha_solicitud) = CURDATE() THEN 1 END) as hoy,
+--     COUNT(CASE WHEN YEARWEEK(s.fecha_solicitud) = YEARWEEK(CURDATE()) THEN 1 END) as semana
+-- FROM solicitudes s
+-- GROUP BY s.estado_actual;
+
+-- Optimización de consulta para coordinador (versión simplificada)
+-- Esta consulta reemplaza la compleja subconsulta en reportes.py
+-- SELECT
+--     s.id,
+--     s.titulo,
+--     s.fecha_solicitud,
+--     s.estado_actual,
+--     tp.nombre as tipo_programa,
+--     u.nombre as solicitante,
+--     COALESCE(MAX(f.fecha_firma), s.fecha_solicitud) as ultima_actividad,
+--     COUNT(f.id) as firmas_completadas,
+--     MAX(tpr.orden_firma) as max_orden_firma,
+--     COUNT(CASE WHEN f.estado_firma = 'pendiente' THEN 1 END) as firmas_pendientes
+-- FROM solicitudes s
+-- JOIN tipo_programas tp ON s.tipo_programa_id = tp.id
+-- JOIN usuarios u ON s.usuario_id = u.id
+-- LEFT JOIN firmas f ON s.id = f.solicitud_id
+-- LEFT JOIN tipo_programa_roles tpr ON tp.id = tpr.tipo_programa_id
+-- WHERE s.estado_actual IN ('en_revision', 'corregida', 'firmando')
+-- GROUP BY s.id, s.titulo, s.fecha_solicitud, s.estado_actual, tp.nombre, u.nombre
+-- HAVING firmas_pendientes > 0 OR s.estado_actual IN ('en_revision', 'corregida')
+-- ORDER BY ultima_actividad DESC
+-- LIMIT 50;
+
+-- Consulta optimizada para firmantes
+-- SELECT
+--     s.id,
+--     s.titulo,
+--     s.fecha_solicitud,
+--     s.estado_actual,
+--     tp.nombre as tipo_programa,
+--     u.nombre as solicitante,
+--     f.fecha_asignada,
+--     f.estado_firma,
+--     f.orden_firma
+-- FROM solicitudes s
+-- JOIN tipo_programas tp ON s.tipo_programa_id = tp.id
+-- JOIN usuarios u ON s.usuario_id = u.id
+-- JOIN firmas f ON s.id = f.solicitud_id
+-- WHERE f.usuario_id = ? AND f.estado_firma = 'pendiente'
+-- ORDER BY f.fecha_asignada ASC, f.orden_firma ASC
+-- LIMIT 50;
+
+-- Estadísticas rápidas con índices
+-- SELECT
+--     COUNT(CASE WHEN estado_actual = 'borrador' THEN 1 END) as borradores,
+--     COUNT(CASE WHEN estado_actual = 'en_revision' THEN 1 END) as en_revision,
+--     COUNT(CASE WHEN estado_actual = 'corregida' THEN 1 END) as corregidas,
+--     COUNT(CASE WHEN estado_actual = 'firmando' THEN 1 END) as firmando,
+--     COUNT(CASE WHEN estado_actual = 'completada' THEN 1 END) as completadas,
+--     COUNT(CASE WHEN estado_actual = 'rechazada' THEN 1 END) as rechazadas
+-- FROM solicitudes
+-- WHERE fecha_solicitud >= DATE_SUB(CURDATE(), INTERVAL 30 DAY);

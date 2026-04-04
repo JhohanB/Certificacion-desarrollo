@@ -162,7 +162,7 @@ def get_solicitud_by_doc_ficha(db: Session, numero_documento: str, numero_ficha:
         raise
 
 
-def get_all_solicitudes(db: Session, estado: Optional[str] = None, tipo_programa_id: Optional[int] = None, usuario_id: Optional[int] = None) -> list:
+def get_all_solicitudes(db: Session, estado: Optional[str] = None, tipo_programa_id: Optional[int] = None, usuario_id: Optional[int] = None, page: int = 1, limit: int = 50) -> list:
     """
     Obtiene todas las solicitudes con filtros opcionales.
     Para el panel del funcionario.
@@ -210,7 +210,10 @@ def get_all_solicitudes(db: Session, estado: Optional[str] = None, tipo_programa
             INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id
             {where}
             ORDER BY s.fecha_solicitud DESC
+            LIMIT :limit OFFSET :offset
         """)
+        params["limit"] = limit
+        params["offset"] = (page - 1) * limit
         return db.execute(query, params).mappings().all()
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener solicitudes: {e}")

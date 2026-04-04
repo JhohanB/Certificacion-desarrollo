@@ -265,6 +265,35 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
   }, [pdfPage, coordenadas])
 
   const renderTaskRef = useRef(null)
+  const pdfImageDataRef = useRef(null)
+
+  const drawCoords = (ctx) => {
+    coordenadas.forEach(coord => {
+      const color = COLORES_ROL[coord.nombre_rol] ?? COLOR_DEFAULT
+      dibujarRect(ctx, coord.x_porcentaje, coord.y_porcentaje,
+        coord.ancho_porcentaje, coord.alto_porcentaje,
+        canvasRef.current.width, canvasRef.current.height, color, `${coord.nombre_rol} - firma`)
+      dibujarRect(ctx, coord.nombre_x_porcentaje, coord.nombre_y_porcentaje,
+        coord.nombre_ancho_porcentaje, coord.nombre_alto_porcentaje,
+        canvasRef.current.width, canvasRef.current.height, color, `${coord.nombre_rol} - nombre`, true)
+    })
+  }
+
+  const drawCurrentRect = (ctx, rect) => {
+    if (!rect) return
+    const x = rect.w < 0 ? rect.x + rect.w : rect.x
+    const y = rect.h < 0 ? rect.y + rect.h : rect.y
+    const w = Math.abs(rect.w)
+    const h = Math.abs(rect.h)
+    const color = COLORES_ROL[rolSeleccionado] ?? COLOR_DEFAULT
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.setLineDash([4, 2])
+    ctx.strokeRect(x, y, w, h)
+    ctx.fillStyle = color + '22'
+    ctx.fillRect(x, y, w, h)
+    ctx.setLineDash([])
+  }
 
   const renderPDF = useCallback(async () => {
     if (!pdfPage || !canvasRef.current) return
@@ -297,15 +326,8 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
     }
     renderTaskRef.current = null
 
-    coordenadas.forEach(coord => {
-      const color = COLORES_ROL[coord.nombre_rol] ?? COLOR_DEFAULT
-      dibujarRect(ctx, coord.x_porcentaje, coord.y_porcentaje,
-        coord.ancho_porcentaje, coord.alto_porcentaje,
-        canvas.width, canvas.height, color, `${coord.nombre_rol} - firma`)
-      dibujarRect(ctx, coord.nombre_x_porcentaje, coord.nombre_y_porcentaje,
-        coord.nombre_ancho_porcentaje, coord.nombre_alto_porcentaje,
-        canvas.width, canvas.height, color, `${coord.nombre_rol} - nombre`, true)
-    })
+    pdfImageDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    drawCoords(ctx)
   }, [pdfPage, coordenadas])
 
   const dibujarRect = (ctx, xPct, yPct, wPct, hPct, canvasW, canvasH, color, label, esNombre = false) => {
@@ -350,21 +372,24 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
   const onMouseMove = (e) => {
     if (!dibujando || !inicio) return
     const pos = getPosCanvas(e)
-    setRectActual({ x: inicio.x, y: inicio.y, w: pos.x - inicio.x, h: pos.y - inicio.y })
+    const rect = { x: inicio.x, y: inicio.y, w: pos.x - inicio.x, h: pos.y - inicio.y }
+    setRectActual(rect)
 
-    // Re-renderizar con rect actual
-    renderPDF().then(() => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      const pos2 = getPosCanvas(e)
-      ctx.strokeStyle = COLORES_ROL[rolSeleccionado] ?? COLOR_DEFAULT
-      ctx.lineWidth = 2
-      ctx.setLineDash([4, 2])
-      ctx.strokeRect(inicio.x, inicio.y, pos2.x - inicio.x, pos2.y - inicio.y)
-      ctx.fillStyle = (COLORES_ROL[rolSeleccionado] ?? COLOR_DEFAULT) + '22'
-      ctx.fillRect(inicio.x, inicio.y, pos2.x - inicio.x, pos2.y - inicio.y)
-    })
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (pdfImageDataRef.current) {
+      ctx.putImageData(pdfImageDataRef.current, 0, 0)
+    }
+    drawCoords(ctx)
+    drawCurrentRect(ctx, rect)
+  }
+
+  const onMouseLeave = () => {
+    if (!dibujando) return
+    setDibujando(false)
+    setInicio(null)
+    setRectActual(null)
   }
 
   const onMouseUp = (e) => {
@@ -525,6 +550,7 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
           />
         </div>
       </div>

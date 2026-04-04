@@ -78,6 +78,8 @@ async def crear_usuario(
 
 @router.get("/", response_model=List[UsuarioListOut])
 def listar_usuarios(
+    page: int = 1,
+    limit: int = 50,
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin)
 ):
@@ -85,7 +87,7 @@ def listar_usuarios(
     Lista todos los funcionarios del sistema.
     Solo el ADMIN puede acceder.
     """
-    return crud_usuarios.get_all_usuarios(db)
+    return crud_usuarios.get_all_usuarios(db, page=page, limit=limit)
 
 
 @router.get("/coordinadores")

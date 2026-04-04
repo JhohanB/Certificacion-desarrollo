@@ -407,6 +407,8 @@ def get_estados_posibles(_: dict = Depends(check_permission("solicitudes", "leer
 def listar_solicitudes(
     estado: Optional[EstadoSolicitud] = None,
     tipo_programa_id: Optional[int] = None,
+    page: int = 1,
+    limit: int = 50,
     db: Session = Depends(get_db),
     current_user: dict = Depends(check_permission("solicitudes", "leer"))
 ):
@@ -414,7 +416,9 @@ def listar_solicitudes(
         db,
         estado.value if estado else None,
         tipo_programa_id,
-        usuario_id=current_user["id"]
+        usuario_id=current_user["id"],
+        page=page,
+        limit=limit
     )
 
 

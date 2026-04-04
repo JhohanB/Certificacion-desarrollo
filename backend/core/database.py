@@ -12,13 +12,14 @@ logger = logging.getLogger(__name__)
 
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=True,           # Imprime las sentencias SQL en consola, cambiar a False en producción
+    echo=False,          # Desactivar logging SQL para producción y rendimiento
     pool_pre_ping=True,  # Verifica que las conexiones estén activas antes de usarlas
     pool_recycle=3600,   # Recicla conexiones después de 1 hora
     pool_size=10,        # Conexiones permanentes en el pool
     max_overflow=20,     # Conexiones adicionales cuando el pool está lleno
     pool_timeout=30,     # Tiempo máximo de espera para obtener una conexión
-    poolclass=QueuePool
+    poolclass=QueuePool,
+    connect_args={"init_command": "SET time_zone = '-05:00'"}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -42,9 +43,6 @@ def get_db() -> Generator:
     """
     db = SessionLocal()
     try:
-        # Configurar timezone de Colombia (UTC-5) para esta sesión
-        # Usando offset en lugar de nombre de zona horaria para compatibilidad
-        db.execute(text("SET time_zone = '-05:00'"))
         yield db
         db.commit()
     except SQLAlchemyError as e:

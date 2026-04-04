@@ -16,6 +16,7 @@ export default function Usuarios() {
   const [roles, setRoles] = useState([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [pagina, setPagina] = useState(1)
 
   // Modales
   const [modalCrear, setModalCrear] = useState(false)
@@ -44,6 +45,7 @@ export default function Usuarios() {
   }
 
   useEffect(() => { cargar() }, [])
+  useEffect(() => { setPagina(1) }, [busqueda])
 
   const usuariosFiltrados = usuarios.filter(u => {
     if (!busqueda) return true
@@ -280,7 +282,12 @@ export default function Usuarios() {
           rowKey="id"
           loading={cargando}
           scroll={{ x: 700 }}
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: pagina,
+            pageSize: 10,
+            onChange: setPagina,
+            showTotal: (total) => `${total} usuarios`
+          }}
           locale={{ emptyText: 'No hay usuarios' }}
         />
       </Card>
