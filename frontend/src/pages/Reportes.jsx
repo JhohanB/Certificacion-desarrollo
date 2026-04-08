@@ -431,14 +431,14 @@ export default function Reportes() {
             <Col xs={24} sm={8}>
               <Card style={{ borderRadius: 12, border: '1px solid #b7eb8f', background: '#f6ffed' }}>
                 <Statistic title="Total solicitudes" value={resumen?.total_solicitudes ?? 0}
-                  prefix={<FileTextOutlined />} valueStyle={{ color: '#004A2F' }} />
+                  prefix={<FileTextOutlined />} styles={{ content: { color: '#004A2F' } }} />
               </Card>
             </Col>
             <Col xs={24} sm={8}>
               <Card style={{ borderRadius: 12, border: '1px solid #52c41a', background: '#f6ffed' }}>
                 <Statistic title="Certificadas"
                   value={resumen?.por_estado?.find(e => e.estado_actual === 'CERTIFICADO')?.total ?? 0}
-                  prefix={<CheckCircleOutlined />} valueStyle={{ color: '#52c41a' }} />
+                  prefix={<CheckCircleOutlined />} styles={{ content: { color: '#52c41a' } }} />
               </Card>
             </Col>
             <Col xs={24} sm={8}>
@@ -446,7 +446,7 @@ export default function Reportes() {
                 <Statistic title="Días promedio certificación"
                   value={resumen?.dias_promedio_certificacion ?? 'N/A'}
                   suffix={resumen?.dias_promedio_certificacion ? 'días' : ''}
-                  prefix={<ClockCircleOutlined />} valueStyle={{ color: '#1677ff' }} />
+                  prefix={<ClockCircleOutlined />} styles={{ content: { color: '#1677ff' } }} />
               </Card>
             </Col>
           </Row>
@@ -506,7 +506,7 @@ export default function Reportes() {
             ].map(({ label, value, color }) => (
               <Col xs={12} sm={6} key={label}>
                 <Card style={{ borderRadius: 12, textAlign: 'center' }}>
-                  <Statistic title={label} value={value} valueStyle={{ color }} />
+                  <Statistic title={label} value={value} styles={{ content: { color } }} />
                 </Card>
               </Col>
             ))}

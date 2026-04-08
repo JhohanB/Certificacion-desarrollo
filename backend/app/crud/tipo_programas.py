@@ -32,6 +32,12 @@ def get_all_tipos_programa(db: Session) -> list:
 
 def toggle_activo_tipo_programa(db: Session, tipo_id: int, activo: bool) -> bool:
     try:
+        # Si se va a activar, validar que tenga al menos un rol firmante
+        if activo:
+            roles_firmantes = get_roles_by_tipo(db, tipo_id)
+            if not roles_firmantes:
+                raise ValueError("No se puede activar un tipo de programa sin roles firmantes")
+
         query = text("UPDATE tipo_programas SET activo = :activo WHERE id = :id")
         db.execute(query, {"activo": activo, "id": tipo_id})
         db.commit()
@@ -39,6 +45,9 @@ def toggle_activo_tipo_programa(db: Session, tipo_id: int, activo: bool) -> bool
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error al cambiar estado: {e}")
+        raise
+    except ValueError as e:
+        logger.error(f"Validación fallida: {e}")
         raise
 
 

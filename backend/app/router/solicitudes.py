@@ -674,6 +674,20 @@ async def confirmar_revision(
                 WHERE solicitud_id = :id
                 AND estado_firma = 'RECHAZADO'
             """), {"id": solicitud_id})
+
+            # Limpiar firmas de roles que ya no son firmantes del tipo_programa
+            from app.crud.documentos import limpiar_firmas_obsoletas
+            limpiar_firmas_obsoletas(db, solicitud_id, solicitud["tipo_programa_id"])
+
+            # Regenerar PDF con documentos corregidos
+            try:
+                pdf_url, pdf_hash = generar_pdf_consolidado(
+                    solicitud_id, documentos, settings.UPLOAD_DIR
+                )
+                update_pdf_consolidado(db, solicitud_id, pdf_url, pdf_hash)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error al regenerar PDF: {str(e)}")
+
             db.commit()
         else:
             create_firmas_solicitud(

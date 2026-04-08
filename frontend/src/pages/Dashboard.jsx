@@ -84,7 +84,7 @@ function DashboardAdmin({ data }) {
                 title="Días promedio desde solicitud hasta certificación"
                 value={data?.dias_promedio_certificacion ?? 'Sin datos'}
                 suffix={data?.dias_promedio_certificacion ? 'días' : ''}
-                valueStyle={{ color: '#004A2F', fontSize: 48 }}
+                styles={{ content: { color: '#004A2F', fontSize: 48 } }}
               />
             </div>
           </Card>
@@ -138,7 +138,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
               title="Pendientes de revisión"
               value={data?.pendientes_revision?.length ?? 0}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -148,7 +148,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
               title="Corregidas por aprendiz"
               value={data?.corregidas?.length ?? 0}
               prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1677ff' }}
+              styles={{ content: { color: '#1677ff' } }}
             />
           </Card>
         </Col>
@@ -158,7 +158,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
               title="Solicitudes atrasadas (+3 días)"
               value={data?.total_atrasadas ?? 0}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
@@ -170,7 +170,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
           type="warning"
           showIcon
           icon={<WarningOutlined />}
-          message={`${data.rechazos_recientes.length} firma(s) rechazada(s)`}
+          title={`${data.rechazos_recientes.length} firma(s) rechazada(s)`}
           style={{ marginBottom: 16 }}
         />
       )}
@@ -215,7 +215,7 @@ function DashboardFuncionario({ data, onVerSolicitud }) {
               <Table
                 dataSource={data?.rechazos_recientes}
                 columns={columnasRechazos}
-                rowKey="solicitud_id"
+                rowKey="id"
                 size="small"
                 scroll={{ x: 600 }}
                 pagination={{ pageSize: 5 }}
@@ -284,7 +284,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
               title="Pendientes de mi firma"
               value={data?.pendientes_firma?.length ?? 0}
               prefix={<SignatureOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -294,7 +294,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
               title="Firmadas este mes"
               value={data?.firmadas_este_mes ?? 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -304,7 +304,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
               title="Rechazadas este mes"
               value={data?.rechazadas_este_mes ?? 0}
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
+              styles={{ content: { color: '#ff4d4f' } }}
             />
           </Card>
         </Col>
@@ -403,7 +403,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
               title="Pendientes de mi firma"
               value={data?.pendientes_firma?.length ?? 0}
               prefix={<SignatureOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              styles={{ content: { color: '#faad14' } }}
             />
           </Card>
         </Col>
@@ -413,7 +413,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
               title="Esperando solo mi firma"
               value={data?.solo_esperando_coordinador ?? 0}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#1677ff' }}
+              styles={{ content: { color: '#1677ff' } }}
             />
           </Card>
         </Col>
@@ -423,7 +423,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
               title="Firmadas este mes"
               value={data?.firmadas_este_mes ?? 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -433,7 +433,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
               title="Certificadas este mes"
               value={data?.certificadas_este_mes ?? 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#004A2F' }}
+              styles={{ content: { color: '#004A2F' } }}
             />
           </Card>
         </Col>

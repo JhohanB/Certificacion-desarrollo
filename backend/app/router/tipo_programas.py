@@ -312,6 +312,9 @@ def cambiar_estado_tipo_programa(
     _: dict = Depends(require_admin)
 ):
     from app.crud.tipo_programas import toggle_activo_tipo_programa
-    toggle_activo_tipo_programa(db, tipo_id, activo)
-    return {"message": f"Tipo de programa {'activado' if activo else 'desactivado'}"}
+    try:
+        toggle_activo_tipo_programa(db, tipo_id, activo)
+        return {"message": f"Tipo de programa {'activado' if activo else 'desactivado'}"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 

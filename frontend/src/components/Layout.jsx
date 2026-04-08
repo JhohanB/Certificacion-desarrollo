@@ -150,7 +150,7 @@ export default function AppLayout() {
         placement="left"
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
-        width={220}
+        size={220}
         styles={{ body: { padding: 0, background: '#004A2F' }, header: { display: 'none' } }}
       >
         <LogoContent showText={true} />

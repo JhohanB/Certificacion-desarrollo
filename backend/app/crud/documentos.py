@@ -454,7 +454,7 @@ def todos_anteriores_firmaron(db: Session, solicitud_id: int, rol_id: int) -> bo
             WHERE f.solicitud_id = :solicitud_id
             AND s.id = :solicitud_id
             AND f.rol_id != :rol_id
-            AND f.estado_firma = 'PENDIENTE'
+            AND f.estado_firma IN ('PENDIENTE', 'RECHAZADO')
             AND tpr.orden_firma < :orden_actual
         """)
         result = db.execute(query, {
@@ -699,4 +699,64 @@ def get_firmas_con_imagen(db: Session, solicitud_id: int) -> list:
         return db.execute(query, {"solicitud_id": solicitud_id}).mappings().all()
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener firmas con imagen: {e}")
+        raise
+
+
+def limpiar_firmas_obsoletas(db: Session, solicitud_id: int, tipo_programa_id: int) -> None:
+    """
+    Elimina las firmas de roles que ya no son firmantes del tipo_programa.
+    Se llama cuando una solicitud vuelve a PENDIENTE_FIRMAS después de correcciones.
+    Solo elimina firmas que estén en PENDIENTE o FIRMADO (no RECHAZADO).
+    """
+    try:
+        # Obtener roles que actualmente son firmantes del tipo_programa
+        query_roles_actuales = text("""
+            SELECT tpr.rol_id
+            FROM tipo_programa_roles tpr
+            INNER JOIN roles r ON r.id = tpr.rol_id
+            WHERE tpr.tipo_programa_id = :tipo_programa_id
+            AND tpr.obligatorio = TRUE
+            AND r.activo = TRUE
+        """)
+        roles_actuales = db.execute(query_roles_actuales, {"tipo_programa_id": tipo_programa_id}).mappings().all()
+        roles_actuales_ids = [r["rol_id"] for r in roles_actuales]
+
+        # Eliminar firmas de roles que ya no son firmantes
+        if roles_actuales_ids:
+            query_eliminar = text("""
+                DELETE FROM firmas
+                WHERE solicitud_id = :solicitud_id
+                AND rol_id NOT IN :roles_actuales
+                AND estado_firma IN ('PENDIENTE', 'FIRMADO')
+            """)
+            db.execute(query_eliminar, {
+                "solicitud_id": solicitud_id,
+                "roles_actuales": tuple(roles_actuales_ids)
+            })
+        else:
+            # Si no hay roles firmantes, eliminar todas las firmas pendientes/firmadas
+            query_eliminar_todas = text("""
+                DELETE FROM firmas
+                WHERE solicitud_id = :solicitud_id
+                AND estado_firma IN ('PENDIENTE', 'FIRMADO')
+            """)
+            db.execute(query_eliminar_todas, {"solicitud_id": solicitud_id})
+
+        # Verificar si quedan firmas activas
+        query_firmas_restantes = text("""
+            SELECT COUNT(*) as total FROM firmas
+            WHERE solicitud_id = :solicitud_id
+            AND estado_firma IN ('PENDIENTE', 'FIRMADO', 'RECHAZADO')
+        """)
+        restantes = db.execute(query_firmas_restantes, {"solicitud_id": solicitud_id}).mappings().first()
+
+        # Si no quedan firmas, crear nuevas (esto no debería pasar si el tipo_programa tiene roles)
+        if restantes["total"] == 0 and roles_actuales_ids:
+            # Solo crear si hay roles disponibles
+            create_firmas_solicitud(db, solicitud_id, tipo_programa_id)
+
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error al limpiar firmas obsoletas: {e}")
         raise

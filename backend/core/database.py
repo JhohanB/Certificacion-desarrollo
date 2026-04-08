@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=False,          # Desactivar logging SQL para producción y rendimiento
+    echo=True,          # Desactivar logging SQL para producción y rendimiento
     pool_pre_ping=True,  # Verifica que las conexiones estén activas antes de usarlas
     pool_recycle=3600,   # Recicla conexiones después de 1 hora
     pool_size=10,        # Conexiones permanentes en el pool

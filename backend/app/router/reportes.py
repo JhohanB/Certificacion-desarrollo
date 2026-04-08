@@ -514,7 +514,7 @@ def reporte_dashboard(
         corregidas = db.execute(query_corregidas).mappings().all()
 
         query_rechazos = text("""
-            SELECT f.solicitud_id, s.nombre_aprendiz, s.nombre_programa,
+            SELECT f.id, f.solicitud_id, s.nombre_aprendiz, s.nombre_programa,
                    r.nombre AS rol_rechazo, u.nombre_completo AS funcionario,
                    f.motivo_rechazo, f.fecha_firma AS fecha_rechazo
             FROM firmas f
@@ -536,12 +536,17 @@ def reporte_dashboard(
         """)
         atrasadas = db.execute(query_atrasadas).mappings().first()
 
+        # Solicitudes con coordinador inactivo
+        from app.crud.usuarios import get_solicitudes_con_coordinador_inactivo
+        solicitudes_coordinador_inactivo = get_solicitudes_con_coordinador_inactivo(db)
+
         return {
             "rol": "FUNCIONARIO_CERTIFICACION",
             "pendientes_revision": list(pendientes),
             "corregidas": list(corregidas),
             "rechazos_recientes": list(rechazos),
-            "total_atrasadas": atrasadas["total"]
+            "total_atrasadas": atrasadas["total"],
+            "solicitudes_coordinador_inactivo": list(solicitudes_coordinador_inactivo)
         }
 
     # -------------------------------------------------------

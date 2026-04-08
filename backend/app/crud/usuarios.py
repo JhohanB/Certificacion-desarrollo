@@ -295,6 +295,7 @@ def cambiar_password(db: Session, usuario_id: int, nueva_password: str) -> bool:
 def toggle_activo(db: Session, usuario_id: int, activo: bool) -> bool:
     """
     Activa o desactiva un funcionario.
+    Si se desactiva un coordinador, no hace cambios en solicitudes existentes.
     """
     try:
         query = text("""
@@ -306,6 +307,33 @@ def toggle_activo(db: Session, usuario_id: int, activo: bool) -> bool:
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error al cambiar estado del usuario: {e}")
+        raise
+
+
+def get_solicitudes_con_coordinador_inactivo(db: Session) -> list:
+    """
+    Obtiene solicitudes que tienen asignado un coordinador inactivo.
+    Se usa para mostrar alertas en el panel de certificación.
+    """
+    try:
+        query = text("""
+            SELECT DISTINCT
+                s.id, s.numero_documento, s.numero_ficha, s.nombre_aprendiz,
+                s.nombre_programa, s.estado_actual, s.fecha_solicitud,
+                u.nombre_completo AS nombre_coordinador,
+                u.correo AS correo_coordinador
+            FROM solicitudes s
+            INNER JOIN firmas f ON f.solicitud_id = s.id
+            INNER JOIN roles r ON r.id = f.rol_id
+            INNER JOIN usuarios u ON u.id = f.usuario_id
+            WHERE r.nombre = 'COORDINADOR'
+            AND u.activo = FALSE
+            AND s.estado_actual IN ('PENDIENTE_FIRMAS', 'PENDIENTE_CERTIFICACION')
+            ORDER BY s.fecha_solicitud DESC
+        """)
+        return db.execute(query).mappings().all()
+    except SQLAlchemyError as e:
+        logger.error(f"Error al obtener solicitudes con coordinador inactivo: {e}")
         raise
 
 
