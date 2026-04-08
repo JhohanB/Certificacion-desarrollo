@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Table, Button, Card, Typography, Tag, Space, Modal,
-  Form, Input, Switch, Popconfirm, message, Checkbox, Divider
+  Form, Input, Switch, Popconfirm, message, Checkbox, Divider, Tooltip
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, ReloadOutlined, SettingOutlined
@@ -9,6 +9,34 @@ import {
 import api from '../../api/axios'
 
 const { Title, Text } = Typography
+
+// Descripciones de módulos y acciones para mejor comprensión
+const DESCRIPCIONES_MODULOS = {
+  'SOLICITUDES': 'Acceso al panel de solicitudes de certificación. Permite gestionar y revisar solicitudes.',
+  'USUARIOS': 'Acceso al panel de usuarios. Permite administrar cuentas de usuarios.',
+  'ROLES': 'Acceso al panel de roles y permisos. Permite configurar roles y asignar permisos.',
+  'PLANTILLAS': 'Acceso al panel de plantillas de certificación. Permite crear y editar plantillas.',
+  'TIPOS_PROGRAMA': 'Acceso al panel de tipos de programa. Permite gestionar categorías de programas.',
+  'DOCUMENTOS': 'Acceso al panel de documentos. Permite subir y gestionar archivos.',
+  'REPORTES': 'Acceso al panel de reportes. Permite generar y ver estadísticas.',
+  'AUDITORIA': 'Acceso al panel de auditoría. Permite revisar logs de actividades.'
+}
+
+const DESCRIPCIONES_ACCIONES = {
+  'CREAR': 'Permite crear nuevos elementos (ej: nueva solicitud, nuevo usuario, nueva plantilla).',
+  'LEER': 'Permite ver y listar elementos existentes en el módulo.',
+  'ACTUALIZAR': 'Permite modificar datos y propiedades de elementos existentes (ej: cambiar nombre, estado o configuración).',
+  'EDITAR': 'Permite editar contenido detallado de elementos (ej: modificar texto, archivos o formularios). Nota: Similar a "Actualizar", pero enfocado en edición de contenido.',
+  'ELIMINAR': 'Permite eliminar elementos del sistema.',
+  'APROBAR': 'Permite aprobar o rechazar solicitudes.',
+  'FIRMAR': 'Permite firmar documentos digitalmente.',
+  'CERTIFICAR': 'Permite emitir certificados finales.',
+  'OBSERVAR': 'Permite agregar observaciones o comentarios.',
+  'REVISAR': 'Permite marcar como revisado o confirmado.',
+  'EXPORTAR': 'Permite descargar datos o reportes.',
+  'IMPORTAR': 'Permite subir datos masivos.',
+  'ADMINISTRAR': 'Permite configuraciones avanzadas del módulo.'
+}
 
 export default function Roles() {
   const [roles, setRoles] = useState([])
@@ -249,23 +277,39 @@ export default function Roles() {
         footer={<Button onClick={() => setModalPermisos(false)}>Cerrar</Button>}
         width={700}
       >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            Configura los permisos para este rol. Cada módulo representa un panel del sistema, y las acciones determinan qué operaciones puede realizar el usuario.
+            Pasa el mouse sobre cada acción para ver una descripción detallada. Nota: Algunos términos como "Editar" y "Actualizar" pueden parecer similares, pero "Editar" se enfoca en modificar contenido, mientras que "Actualizar" cambia propiedades o estado.
+          </Text>
+        </div>
         {modulos.map(modulo => {
           const permisosDelModulo = rolSeleccionado?.permisos?.filter(p => p.modulo_id === modulo.id) ?? []
           return (
             <div key={modulo.id} style={{ marginBottom: 16 }}>
               <Text strong style={{ textTransform: 'capitalize' }}>{modulo.nombre}</Text>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {DESCRIPCIONES_MODULOS[modulo.nombre.toUpperCase()] || 'Acceso al módulo correspondiente.'}
+                </Text>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
                 {acciones.map(accion => {
                   const permiso = permisosDelModulo.find(p => p.accion_id === accion.id)
                   const tienePermiso = !!permiso
                   return (
-                    <Checkbox
+                    <Tooltip
                       key={accion.id}
-                      checked={tienePermiso}
-                      onChange={() => togglePermiso(modulo.id, accion.id, tienePermiso, permiso?.id)}
+                      title={DESCRIPCIONES_ACCIONES[accion.nombre.toUpperCase()] || `Permite realizar la acción ${accion.nombre.toLowerCase()}.`}
+                      placement="top"
                     >
-                      {accion.nombre}
-                    </Checkbox>
+                      <Checkbox
+                        checked={tienePermiso}
+                        onChange={() => togglePermiso(modulo.id, accion.id, tienePermiso, permiso?.id)}
+                      >
+                        {accion.nombre}
+                      </Checkbox>
+                    </Tooltip>
                   )
                 })}
               </div>

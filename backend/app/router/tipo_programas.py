@@ -8,7 +8,8 @@ from core.database import get_db
 from app.schemas.tipo_programas import (
     TipoProgramaCreate, TipoProgramaUpdate, TipoProgramaOut,
     TipoProgramaDetalleOut, DocumentoRequeridoCreate, DocumentoRequeridoUpdate,
-    DocumentoRequeridoOut, AsignarDocumentoCreate, AsignarRolFirmanteCreate
+    DocumentoRequeridoOut, AsignarDocumentoCreate, AsignarRolFirmanteCreate,
+    MoverDocumentoTipo
 )
 from app.crud import tipo_programas as crud_tipos
 from app.router.dependencies import require_admin
@@ -60,7 +61,7 @@ def crear_tipo_programa(
             detail="Ya existe un tipo de programa con ese nombre"
         )
 
-    tipo_id = crud_tipos.create_tipo_programa(db, datos.nombre)
+    tipo_id = crud_tipos.create_tipo_programa(db, datos.nombre, datos.descripcion)
 
     from app.utils.auditoria import registrar
     registrar(db, "TIPO_PROGRAMA_CREADO", "tipo_programas", tipo_id,
@@ -91,7 +92,7 @@ def actualizar_tipo_programa(
             detail="Ya existe un tipo de programa con ese nombre"
         )
 
-    crud_tipos.update_tipo_programa(db, tipo_id, datos.nombre)
+    crud_tipos.update_tipo_programa(db, tipo_id, datos.nombre, datos.descripcion)
 
     from app.utils.auditoria import registrar
     registrar(db, "TIPO_PROGRAMA_ACTUALIZADO", "tipo_programas", tipo_id,
@@ -175,6 +176,32 @@ def quitar_documento(
               f"Documento quitado de tipo {tipo_id}", current_user["id"])
 
     return {"message": "Documento quitado correctamente"}
+
+
+@router.put("/{tipo_id}/documentos/{relacion_id}/orden")
+def mover_documento(
+    tipo_id: int,
+    relacion_id: int,
+    datos: MoverDocumentoTipo,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin)
+):
+    """Mueve el orden de un documento dentro de un tipo de programa."""
+    tipo = crud_tipos.get_tipo_programa_by_id(db, tipo_id)
+    if not tipo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tipo de programa no encontrado")
+
+    if datos.direccion not in ('up', 'down'):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Dirección inválida")
+
+    if not crud_tipos.mover_documento_de_tipo(db, tipo_id, relacion_id, datos.direccion):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No se puede mover este documento")
+
+    from app.utils.auditoria import registrar
+    registrar(db, "DOCUMENTO_ORDEN_CAMBIADO", "tipo_programa_documentos", tipo_id,
+              f"Documento {relacion_id} movido {datos.direccion} en tipo {tipo_id}", current_user["id"])
+
+    return {"message": "Orden de documento actualizado correctamente"}
 
 
 # -------------------------------------------------------

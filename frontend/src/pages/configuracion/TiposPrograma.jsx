@@ -5,7 +5,8 @@ import {
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  FileTextOutlined, TeamOutlined, ReloadOutlined
+  FileTextOutlined, TeamOutlined, ReloadOutlined,
+  ArrowUpOutlined, ArrowDownOutlined
 } from '@ant-design/icons'
 import api from '../../api/axios'
 
@@ -22,12 +23,16 @@ export default function TiposPrograma() {
   const [modalEditar, setModalEditar] = useState(false)
   const [modalDocumentos, setModalDocumentos] = useState(false)
   const [modalRoles, setModalRoles] = useState(false)
+  const [modalGestionDocumentos, setModalGestionDocumentos] = useState(false)
   const [modalCrearDoc, setModalCrearDoc] = useState(false)
+  const [modalEditarDoc, setModalEditarDoc] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [documentoSeleccionado, setDocumentoSeleccionado] = useState(null)
 
   const [formCrear] = Form.useForm()
   const [formEditar] = Form.useForm()
   const [formDoc] = Form.useForm()
+  const [formEditarDoc] = Form.useForm()
 
   const cargar = async () => {
     setCargando(true)
@@ -131,6 +136,17 @@ export default function TiposPrograma() {
     }
   }
 
+  const moverDocumento = async (relacionId, direccion) => {
+    try {
+      await api.put(`/tipo-programas/${tipoSeleccionado.id}/documentos/${relacionId}/orden`, { direccion })
+      message.success('Orden de documento actualizado')
+      const { data } = await api.get(`/tipo-programas/${tipoSeleccionado.id}`)
+      setTipoSeleccionado(data)
+    } catch (err) {
+      message.error(err.response?.data?.detail ?? 'Error al cambiar el orden')
+    }
+  }
+
   const agregarRol = async (rolId, ordenFirma) => {
     try {
       await api.post(`/tipo-programas/${tipoSeleccionado.id}/roles`, {
@@ -172,10 +188,82 @@ export default function TiposPrograma() {
     }
   }
 
+  const editarDocumento = async (values) => {
+    if (!documentoSeleccionado) return
+    setEnviando(true)
+    try {
+      await api.put(`/tipo-programas/documentos/${documentoSeleccionado.id}`, values)
+      message.success('Documento actualizado')
+      setModalEditarDoc(false)
+      setDocumentoSeleccionado(null)
+      formEditarDoc.resetFields()
+      cargar()
+    } catch (err) {
+      message.error(err.response?.data?.detail ?? 'Error al actualizar documento')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const eliminarDocumento = async (docId) => {
+    try {
+      await api.delete(`/tipo-programas/documentos/${docId}`)
+      message.success('Documento eliminado')
+      cargar()
+    } catch (err) {
+      message.error(err.response?.data?.detail ?? 'Error al eliminar documento')
+    }
+  }
+
+  const abrirGestionDocumentos = () => {
+    setModalGestionDocumentos(true)
+  }
+
+  const abrirEditarDocumento = (doc) => {
+    setDocumentoSeleccionado(doc)
+    formEditarDoc.setFieldsValue({ nombre: doc.nombre, descripcion: doc.descripcion })
+    setModalEditarDoc(true)
+  }
+
   const rolesAsignados = tipoSeleccionado?.roles_firmantes?.map(r => r.rol_id) ?? []
   const rolesDisponibles = roles.filter(r => !rolesAsignados.includes(r.id))
   const docsAsignados = tipoSeleccionado?.documentos?.map(d => d.documento_id) ?? []
   const docsDisponibles = documentos.filter(d => !docsAsignados.includes(d.id))
+
+  const docColumnas = [
+    {
+      title: 'Nombre',
+      dataIndex: 'nombre',
+      key: 'nombre',
+      render: (nombre) => <Text strong>{nombre}</Text>
+    },
+    {
+      title: 'Descripción',
+      dataIndex: 'descripcion',
+      key: 'descripcion',
+      render: (descripcion) => <Text type="secondary">{descripcion || '-'}</Text>
+    },
+    {
+      title: 'Acciones',
+      key: 'acciones',
+      render: (_, record) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => abrirEditarDocumento(record)}>
+            Editar
+          </Button>
+          <Popconfirm
+            title="¿Eliminar este documento requerido?"
+            onConfirm={() => eliminarDocumento(record.id)}
+            okText="Sí" cancelText="No"
+          >
+            <Button size="small" danger icon={<DeleteOutlined />}>
+              Eliminar
+            </Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
 
   const columnas = [
     {
@@ -253,9 +341,10 @@ export default function TiposPrograma() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>Niveles de Formación</Title>
-        <Space>
+        <Space wrap style={{ gap: 8 }}>
+          <Button onClick={abrirGestionDocumentos}>Administrar documentos requeridos</Button>
           <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
           <Button
             type="primary" icon={<PlusOutlined />}
@@ -266,7 +355,6 @@ export default function TiposPrograma() {
           </Button>
         </Space>
       </div>
-
       <Card style={{ borderRadius: 12 }}>
         <Table
           dataSource={tipos} columns={columnas} rowKey="id"
@@ -277,7 +365,8 @@ export default function TiposPrograma() {
       </Card>
 
       {/* Modal Crear */}
-      <Modal title="Nuevo nivel de formación" open={modalCrear}
+      <Modal title="Nuevo nivel de formación" open={modalCrear} centered width="90%"
+        style={{ maxWidth: 520 }}
         onCancel={() => { setModalCrear(false); formCrear.resetFields() }}
         footer={null}>
         <Form form={formCrear} layout="vertical" onFinish={crearTipo}>
@@ -299,7 +388,8 @@ export default function TiposPrograma() {
       </Modal>
 
       {/* Modal Editar */}
-      <Modal title="Editar nivel de formación" open={modalEditar}
+      <Modal title="Editar nivel de formación" open={modalEditar} centered width="90%"
+        style={{ maxWidth: 520 }}
         onCancel={() => setModalEditar(false)} footer={null}>
         <Form form={formEditar} layout="vertical" onFinish={editarTipo}>
           <Form.Item name="nombre" label="Nombre"
@@ -319,13 +409,87 @@ export default function TiposPrograma() {
         </Form>
       </Modal>
 
+      {/* Modal Gestión de documentos requeridos */}
+      <Modal
+        title="Documentos requeridos"
+        open={modalGestionDocumentos}
+        centered
+        width="90%"
+        style={{ maxWidth: 700 }}
+        onCancel={() => setModalGestionDocumentos(false)}
+        footer={null}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Text strong>Catálogo de documentos requeridos</Text>
+          <Button type="primary" onClick={() => setModalCrearDoc(true)}
+            style={{ background: '#004A2F', borderColor: '#004A2F' }}>
+            Nuevo documento
+          </Button>
+        </div>
+        <Table
+          dataSource={documentos}
+          columns={docColumnas}
+          rowKey="id"
+          loading={cargando}
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          locale={{ emptyText: 'No hay documentos requeridos' }}
+        />
+      </Modal>
+
+      <Modal title="Nuevo documento requerido" open={modalCrearDoc} centered width="90%"
+        style={{ maxWidth: 520 }}
+        onCancel={() => { setModalCrearDoc(false); formDoc.resetFields() }}
+        footer={null}>
+        <Form form={formDoc} layout="vertical" onFinish={crearDocumento}>
+          <Form.Item name="nombre" label="Nombre"
+            rules={[{ required: true, message: 'Ingresa el nombre' }]}>
+            <Input placeholder="Ej: Certificado de notas" />
+          </Form.Item>
+          <Form.Item name="descripcion" label="Descripción">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => { setModalCrearDoc(false); formDoc.resetFields() }}>Cancelar</Button>
+            <Button type="primary" htmlType="submit" loading={enviando}
+              style={{ background: '#004A2F', borderColor: '#004A2F' }}>
+              Crear
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      <Modal title="Editar documento requerido" open={modalEditarDoc} centered width="90%"
+        style={{ maxWidth: 520 }}
+        onCancel={() => { setModalEditarDoc(false); setDocumentoSeleccionado(null); formEditarDoc.resetFields() }}
+        footer={null}>
+        <Form form={formEditarDoc} layout="vertical" onFinish={editarDocumento}>
+          <Form.Item name="nombre" label="Nombre"
+            rules={[{ required: true, message: 'Ingresa el nombre' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="descripcion" label="Descripción">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => { setModalEditarDoc(false); setDocumentoSeleccionado(null); formEditarDoc.resetFields() }}>Cancelar</Button>
+            <Button type="primary" htmlType="submit" loading={enviando}
+              style={{ background: '#004A2F', borderColor: '#004A2F' }}>
+              Guardar
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
       {/* Modal Documentos */}
       <Modal
         title={`Documentos — ${tipoSeleccionado?.nombre}`}
         open={modalDocumentos}
+        centered
+        width="90%"
+        style={{ maxWidth: 600 }}
         onCancel={() => setModalDocumentos(false)}
         footer={<Button onClick={() => setModalDocumentos(false)}>Cerrar</Button>}
-        width={600}
       >
         <div style={{ marginBottom: 16 }}>
           <Text strong>Documentos asignados:</Text>
@@ -340,6 +504,21 @@ export default function TiposPrograma() {
               }}>
                 <div>
                   <Text>{doc.nombre_documento}</Text>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Orden: {doc.posicion ?? '-'}
+                    </Text>
+                    <Space split={<span style={{ color: '#ccc' }}>|</span>}>
+                      <Button size="small" icon={<ArrowUpOutlined />}
+                        disabled={doc.orden_documento === 1 || tipoSeleccionado?.documentos?.[0]?.id === doc.id}
+                        onClick={() => moverDocumento(doc.id, 'up')}
+                      />
+                      <Button size="small" icon={<ArrowDownOutlined />}
+                        disabled={tipoSeleccionado?.documentos?.[tipoSeleccionado.documentos.length - 1]?.id === doc.id}
+                        onClick={() => moverDocumento(doc.id, 'down')}
+                      />
+                    </Space>
+                  </div>
                   <Tag color={doc.obligatorio ? 'red' : 'default'} style={{ marginLeft: 8 }}>
                     {doc.obligatorio ? 'Obligatorio' : 'Opcional'}
                   </Tag>
@@ -374,32 +553,17 @@ export default function TiposPrograma() {
             </div>
           </div>
         )}
-
-        <Divider />
-
-        <div>
-          <Text strong>Crear nuevo documento:</Text>
-          <Form layout="inline" style={{ marginTop: 8 }} onFinish={crearDocumento}>
-            <Form.Item name="nombre" rules={[{ required: true }]}>
-              <Input placeholder="Nombre del documento" />
-            </Form.Item>
-            <Form.Item>
-              <Button type="primary" htmlType="submit"
-                style={{ background: '#004A2F', borderColor: '#004A2F' }}>
-                Crear
-              </Button>
-            </Form.Item>
-          </Form>
-        </div>
       </Modal>
 
       {/* Modal Roles */}
       <Modal
         title={`Roles firmantes — ${tipoSeleccionado?.nombre}`}
         open={modalRoles}
+        centered
+        width="90%"
+        style={{ maxWidth: 600 }}
         onCancel={() => setModalRoles(false)}
         footer={<Button onClick={() => setModalRoles(false)}>Cerrar</Button>}
-        width={600}
       >
         <div style={{ marginBottom: 16 }}>
           <Text strong>Roles asignados:</Text>
@@ -449,7 +613,7 @@ function AgregarRolForm({ rol, onAgregar }) {
   const [orden, setOrden] = useState(0)
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 8,
+      display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap',
       padding: '6px 0', borderBottom: '1px solid #f0f0f0'
     }}>
       <Tag color="purple">{rol.nombre}</Tag>

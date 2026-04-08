@@ -116,6 +116,7 @@ CREATE TABLE tipo_programa_documentos (
     tipo_programa_id INT NOT NULL,
     documento_id INT NOT NULL,
     obligatorio BOOLEAN DEFAULT TRUE,
+    orden_documento INT DEFAULT NULL,
     UNIQUE KEY unique_tipo_doc (tipo_programa_id, documento_id),
     FOREIGN KEY (tipo_programa_id) REFERENCES tipo_programas(id) ON DELETE CASCADE,
     FOREIGN KEY (documento_id) REFERENCES documentos_requeridos(id)

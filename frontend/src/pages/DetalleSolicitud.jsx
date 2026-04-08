@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react'
 import {
   Card, Typography, Tag, Button, Descriptions, Table,
   Modal, Form, Input, Alert, Spin, Space, Popconfirm, message,
@@ -80,7 +80,7 @@ function ObservarDocumento({ doc, onObservar }) {
 }
 
 
-function PreviewFirmasSolicitud({ solicitud, plantilla }) {
+const PreviewFirmasSolicitud = memo(function PreviewFirmasSolicitud({ solicitud, plantilla }) {
   const containerRef = useRef(null)
   const renderTaskRef = useRef(null)
   const isRenderingRef = useRef(false)
@@ -92,6 +92,12 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
     COORDINADOR: '#722ed1',
     INSTRUCTOR_SEGUIMIENTO: '#52c41a',
   }
+
+  const plantillaCoordenadas = useMemo(() => plantilla?.coordenadas ?? [], [plantilla?.coordenadas])
+  const primerDoc = useMemo(
+    () => solicitud.documentos?.find(d => d.es_version_activa && d.documento_id === 1),
+    [solicitud?.documentos]
+  )
 
   const clearCanvas = () => {
     if (containerRef.current) {
@@ -114,7 +120,7 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
       isRenderingRef.current = false
       clearCanvas()
     }
-  }, [plantilla, solicitud])
+  }, [plantillaCoordenadas, primerDoc])
 
   const renderPreview = async () => {
     // Evitar múltiples renderizados simultáneos
@@ -134,13 +140,11 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
         renderTaskRef.current = null
       }
 
-      const primerDoc = solicitud.documentos?.find(d => d.es_version_activa && d.documento_id === 1)
       if (!primerDoc?.archivo_url || !containerRef.current) {
         isRenderingRef.current = false
         return
       }
 
-    try {
       const pdfjsLib = await import('pdfjs-dist')
       const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker?url')
       pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
@@ -151,54 +155,39 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
         archivoUrl = '/' + archivoUrl
       }
       const fullUrl = import.meta.env.DEV ? archivoUrl : `${API_URL}${archivoUrl}`
-      console.log('Intentando cargar PDF desde:', fullUrl)
-      console.log('API_URL:', API_URL)
-      console.log('archivo_url original:', primerDoc.archivo_url)
-      console.log('archivo_url corregido:', archivoUrl)
-      
       const response = await fetch(fullUrl, { credentials: 'omit' })
-      console.log('Response status:', response.status)
-      console.log('Response headers:', Object.fromEntries(response.headers))
-      
       if (!response.ok) {
         throw new Error(`Error al cargar PDF: ${response.status} ${response.statusText}`)
       }
       const arrayBuffer = await response.arrayBuffer()
-      console.log('ArrayBuffer size:', arrayBuffer.byteLength)
-      
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
       const page = await pdf.getPage(1)
 
-      console.log('Página cargada, rotate:', page.rotate)
-      console.log('Página dimensions:', page.getViewport({ scale: 1 }).width, page.getViewport({ scale: 1 }).height)
-
       const container = containerRef.current
-      const containerWidth = container?.clientWidth || 700
-      console.log('Container width:', containerWidth)
+      if (!container) {
+        return
+      }
+      const containerWidth = container.clientWidth || 700
       
       // Obtener viewport normalizando la rotación para mostrar siempre derecho
       const viewport = page.getViewport({ scale: 1, rotation: -(page.rotate || 0) })
-      console.log('Viewport con rotación normalizada:', viewport.width, viewport.height)
       const scale = (containerWidth - 16) / viewport.width
-      console.log('Scale:', scale)
       const scaledViewport = page.getViewport({ scale, rotation: -(page.rotate || 0) })
-      console.log('Scaled viewport:', scaledViewport.width, scaledViewport.height)
 
       // Limpiar contenido anterior
       container.innerHTML = ''
 
-      // Crear nuevo canvas
+      // Crear nuevo canvas estable para render
       const canvas = document.createElement('canvas')
       canvas.style.width = '100%'
+      canvas.style.height = 'auto'
+      canvas.setAttribute('aria-label', 'Previsualización de firmas')
       container.appendChild(canvas)
 
-      canvas.width = scaledViewport.width
-      canvas.height = scaledViewport.height
-      console.log('Canvas size set to:', canvas.width, canvas.height)
+      canvas.width = Math.round(scaledViewport.width)
+      canvas.height = Math.round(scaledViewport.height)
 
       const ctx = canvas.getContext('2d')
-      
-      // Limpiar canvas antes de renderizar
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       
       const renderTask = page.render({ 
@@ -209,10 +198,8 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
 
       try {
         await renderTask.promise
-        console.log('PDF renderizado exitosamente')
       } catch (err) {
         if (err?.name === 'RenderingCancelledException') {
-          console.log('Renderizado cancelado')
           return
         }
         throw err
@@ -220,7 +207,7 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
       renderTaskRef.current = null
 
       // Dibujar coordenadas
-      plantilla.coordenadas?.forEach(coord => {
+      plantillaCoordenadas.forEach(coord => {
         const color = COLORES_ROL[coord.nombre_rol] ?? '#004A2F'
 
         const x = (coord.x_porcentaje / 100) * canvas.width
@@ -255,12 +242,11 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
       })
     } catch (err) {
       console.error('Error al renderizar preview:', err)
+    } finally {
+      // Resetear flags de renderizado
+      renderTaskRef.current = null
+      isRenderingRef.current = false
     }
-  } finally {
-    // Resetear flags de renderizado
-    renderTaskRef.current = null
-    isRenderingRef.current = false
-  }
   }
 
   return (
@@ -272,10 +258,10 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
           </Tag>
         ))}
       </div>
-      <div ref={containerRef} style={{ width: '100%', border: '1px solid #d9d9d9' }}></div>
+      <div ref={containerRef} style={{ width: '100%', border: '1px solid #d9d9d9', minHeight: '600px' }}></div>
     </div>
   )
-}
+});
 
 // -------------------------------------------------------
 // Componente principal

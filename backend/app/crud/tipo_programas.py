@@ -204,15 +204,27 @@ def delete_documento_requerido(db: Session, doc_id: int) -> bool:
 def get_documentos_by_tipo(db: Session, tipo_id: int) -> list:
     try:
         query = text("""
-            SELECT tpd.id, tpd.documento_id, dr.nombre AS nombre_documento, tpd.obligatorio
+            SELECT ROW_NUMBER() OVER (ORDER BY tpd.orden_documento) AS posicion, 
+                   tpd.id, tpd.documento_id, dr.nombre AS nombre_documento,
+                   tpd.obligatorio, tpd.orden_documento
             FROM tipo_programa_documentos tpd
             INNER JOIN documentos_requeridos dr ON dr.id = tpd.documento_id
             WHERE tpd.tipo_programa_id = :tipo_id
-            ORDER BY dr.nombre ASC
+            ORDER BY COALESCE(tpd.orden_documento, tpd.id) ASC, dr.nombre ASC
         """)
         return db.execute(query, {"tipo_id": tipo_id}).mappings().all()
     except SQLAlchemyError as e:
         logger.error(f"Error al obtener documentos del tipo de programa: {e}")
+        raise
+
+
+def get_max_orden_documento(db: Session, tipo_id: int) -> int:
+    try:
+        query = text("SELECT MAX(orden_documento) AS max_orden FROM tipo_programa_documentos WHERE tipo_programa_id = :tipo_id")
+        result = db.execute(query, {"tipo_id": tipo_id}).mappings().first()
+        return result["max_orden"] or 0
+    except SQLAlchemyError as e:
+        logger.error(f"Error al obtener el orden máximo de documentos: {e}")
         raise
 
 
@@ -230,16 +242,60 @@ def documento_asignado_a_tipo(db: Session, tipo_id: int, doc_id: int) -> bool:
 
 def asignar_documento_a_tipo(db: Session, tipo_id: int, doc_id: int, obligatorio: bool) -> bool:
     try:
+        orden_actual = get_max_orden_documento(db, tipo_id)
         query = text("""
-            INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio)
-            VALUES (:tipo_id, :doc_id, :obligatorio)
+            INSERT INTO tipo_programa_documentos (tipo_programa_id, documento_id, obligatorio, orden_documento)
+            VALUES (:tipo_id, :doc_id, :obligatorio, :orden_documento)
         """)
-        db.execute(query, {"tipo_id": tipo_id, "doc_id": doc_id, "obligatorio": obligatorio})
+        db.execute(query, {"tipo_id": tipo_id, "doc_id": doc_id, "obligatorio": obligatorio, "orden_documento": orden_actual + 1})
         db.commit()
         return True
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error al asignar documento a tipo: {e}")
+        raise
+
+
+def mover_documento_de_tipo(db: Session, tipo_id: int, relacion_id: int, direccion: str) -> bool:
+    try:
+        query = text("SELECT tipo_programa_id, orden_documento FROM tipo_programa_documentos WHERE id = :id")
+        relacion = db.execute(query, {"id": relacion_id}).mappings().first()
+        if not relacion or relacion["tipo_programa_id"] != tipo_id:
+            return False
+
+        orden_actual = relacion["orden_documento"] or relacion_id
+        if direccion == 'up':
+            query = text("""
+                SELECT id, orden_documento
+                FROM tipo_programa_documentos
+                WHERE tipo_programa_id = :tipo_id
+                  AND COALESCE(orden_documento, id) < COALESCE(:orden_actual, id)
+                ORDER BY COALESCE(orden_documento, id) DESC
+                LIMIT 1
+            """)
+        else:
+            query = text("""
+                SELECT id, orden_documento
+                FROM tipo_programa_documentos
+                WHERE tipo_programa_id = :tipo_id
+                  AND COALESCE(orden_documento, id) > COALESCE(:orden_actual, id)
+                ORDER BY COALESCE(orden_documento, id) ASC
+                LIMIT 1
+            """)
+
+        vecino = db.execute(query, {"tipo_id": tipo_id, "orden_actual": orden_actual}).mappings().first()
+        if not vecino:
+            return False
+
+        db.execute(text("UPDATE tipo_programa_documentos SET orden_documento = :nuevo_orden WHERE id = :id"),
+                   {"nuevo_orden": vecino["orden_documento"] or vecino["id"], "id": relacion_id})
+        db.execute(text("UPDATE tipo_programa_documentos SET orden_documento = :nuevo_orden WHERE id = :id"),
+                   {"nuevo_orden": orden_actual, "id": vecino["id"]})
+        db.commit()
+        return True
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error al mover documento de tipo: {e}")
         raise
 
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional, List
+from typing import Literal, Optional, List
 
 
 # -------------------------------------------------------
@@ -61,6 +61,12 @@ class TipoProgramaDocumentoOut(BaseModel):
     documento_id: int
     nombre_documento: str
     obligatorio: bool
+    orden_documento: Optional[int] = None
+    posicion: Optional[int] = None
+
+
+class MoverDocumentoTipo(BaseModel):
+    direccion: str = Literal['up', 'down']
 
 
 # -------------------------------------------------------
