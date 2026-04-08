@@ -210,7 +210,9 @@ async def corregir_documentos(
         with open(ruta, "wb") as f:
             f.write(contenido)
 
-        crud_docs.reemplazar_documento(db, solicitud_id, doc["documento_id"], ruta)
+        # Guardar la URL relativa con barra inicial para que sea /uploads/...
+        archivo_url = f"/{ruta}"
+        crud_docs.reemplazar_documento(db, solicitud_id, doc["documento_id"], archivo_url)
 
     # Marcar token como usado y cambiar estado
     crud_docs.marcar_token_usado(db, token)

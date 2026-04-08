@@ -1,8 +1,10 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 import os
 
 from core.config import settings
@@ -24,22 +26,43 @@ app = FastAPI(
 )
 
 # -------------------------------------------------------
-# CORS
+# Custom CORS Middleware para /uploads/
+# -------------------------------------------------------
+class CORSUploadMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        # Permitir preflight requests (OPTIONS)
+        if request.method == "OPTIONS":
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS, POST",
+                    "Access-Control-Allow-Headers": "*",
+                    "Access-Control-Expose-Headers": "Content-Disposition, Content-Type, Content-Length",
+                }
+            )
+        
+        response = await call_next(request)
+        
+        # Agregar headers CORS a todas las respuestas
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS, POST"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition, Content-Type, Content-Length"
+        
+        return response
+
+# -------------------------------------------------------
+# CORS Middleware
 # En producción cambiar allow_origins por el dominio real
 # -------------------------------------------------------
-origins = [
-    "http://localhost:5173",  # Puerto de Vite
-    "http://localhost:3000",  # Por si acaso
-    "http://127.0.0.1:5173",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"]
+    expose_headers=["Content-Disposition", "Content-Type", "Content-Length"]
 )
 
 # -------------------------------------------------------
@@ -53,9 +76,32 @@ async def serve_upload(file_path: str):
     full_path = f"uploads/{file_path}"
     logger.info(f"Sirviendo archivo: {full_path}, existe: {os.path.exists(full_path)}")
     if not os.path.exists(full_path):
-        from fastapi import HTTPException
+        logger.error(f"Archivo no encontrado: {full_path}")
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    return FileResponse(full_path)
+    
+    response = FileResponse(
+        full_path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"}
+    )
+    
+    # Agregar headers CORS manualmente
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
+
+@app.options("/uploads/{file_path:path}")
+async def options_serve_upload(file_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 # -------------------------------------------------------
 # Routers

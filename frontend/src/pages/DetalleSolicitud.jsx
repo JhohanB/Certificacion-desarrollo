@@ -81,9 +81,9 @@ function ObservarDocumento({ doc, onObservar }) {
 
 
 function PreviewFirmasSolicitud({ solicitud, plantilla }) {
-  const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const renderTaskRef = useRef(null)
+  const isRenderingRef = useRef(false)
 
   const COLORES_ROL = {
     APE: '#fa8c16',
@@ -93,47 +93,128 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
     INSTRUCTOR_SEGUIMIENTO: '#52c41a',
   }
 
+  const clearCanvas = () => {
+    if (containerRef.current) {
+      containerRef.current.innerHTML = ''
+    }
+  }
+
   useEffect(() => {
     renderPreview()
+    
+    // Cleanup cuando el componente se desmonte
+    return () => {
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel()
+        } catch (e) {
+          // Ignorar errores
+        }
+      }
+      isRenderingRef.current = false
+      clearCanvas()
+    }
   }, [plantilla, solicitud])
 
   const renderPreview = async () => {
-    const primerDoc = solicitud.documentos?.find(d => d.es_version_activa && d.documento_id === 1)
-    if (!primerDoc?.archivo_url || !canvasRef.current) return
-
-    // Cancelar render anterior
-    if (renderTaskRef.current) {
-      renderTaskRef.current.cancel()
-      renderTaskRef.current = null
+    // Evitar múltiples renderizados simultáneos
+    if (isRenderingRef.current) {
+      return
     }
+    isRenderingRef.current = true
+
+    try {
+      // Cancelar cualquier renderizado anterior
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel()
+        } catch (e) {
+          // Ignorar errores de cancelación
+        }
+        renderTaskRef.current = null
+      }
+
+      const primerDoc = solicitud.documentos?.find(d => d.es_version_activa && d.documento_id === 1)
+      if (!primerDoc?.archivo_url || !containerRef.current) {
+        isRenderingRef.current = false
+        return
+      }
 
     try {
       const pdfjsLib = await import('pdfjs-dist')
       const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker?url')
       pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
 
-      const response = await api.get(primerDoc.archivo_url, { responseType: 'arraybuffer' })
-      const pdf = await pdfjsLib.getDocument({ data: response.data }).promise
+      // En desarrollo usamos ruta relativa para aprovechar el proxy de Vite y evitar CORS.
+      let archivoUrl = primerDoc.archivo_url
+      if (!archivoUrl.startsWith('/')) {
+        archivoUrl = '/' + archivoUrl
+      }
+      const fullUrl = import.meta.env.DEV ? archivoUrl : `${API_URL}${archivoUrl}`
+      console.log('Intentando cargar PDF desde:', fullUrl)
+      console.log('API_URL:', API_URL)
+      console.log('archivo_url original:', primerDoc.archivo_url)
+      console.log('archivo_url corregido:', archivoUrl)
+      
+      const response = await fetch(fullUrl, { credentials: 'omit' })
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers))
+      
+      if (!response.ok) {
+        throw new Error(`Error al cargar PDF: ${response.status} ${response.statusText}`)
+      }
+      const arrayBuffer = await response.arrayBuffer()
+      console.log('ArrayBuffer size:', arrayBuffer.byteLength)
+      
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
       const page = await pdf.getPage(1)
 
-      const container = containerRef.current
-      const containerWidth = container?.clientWidth ?? 700
-      const viewport = page.getViewport({ scale: 1 })
-      const scale = (containerWidth - 16) / viewport.width
-      const scaledViewport = page.getViewport({ scale })
+      console.log('Página cargada, rotate:', page.rotate)
+      console.log('Página dimensions:', page.getViewport({ scale: 1 }).width, page.getViewport({ scale: 1 }).height)
 
-      const canvas = canvasRef.current
+      const container = containerRef.current
+      const containerWidth = container?.clientWidth || 700
+      console.log('Container width:', containerWidth)
+      
+      // Obtener viewport normalizando la rotación para mostrar siempre derecho
+      const viewport = page.getViewport({ scale: 1, rotation: -(page.rotate || 0) })
+      console.log('Viewport con rotación normalizada:', viewport.width, viewport.height)
+      const scale = (containerWidth - 16) / viewport.width
+      console.log('Scale:', scale)
+      const scaledViewport = page.getViewport({ scale, rotation: -(page.rotate || 0) })
+      console.log('Scaled viewport:', scaledViewport.width, scaledViewport.height)
+
+      // Limpiar contenido anterior
+      container.innerHTML = ''
+
+      // Crear nuevo canvas
+      const canvas = document.createElement('canvas')
+      canvas.style.width = '100%'
+      container.appendChild(canvas)
+
       canvas.width = scaledViewport.width
       canvas.height = scaledViewport.height
+      console.log('Canvas size set to:', canvas.width, canvas.height)
 
       const ctx = canvas.getContext('2d')
-      const renderTask = page.render({ canvasContext: ctx, viewport: scaledViewport })
+      
+      // Limpiar canvas antes de renderizar
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      const renderTask = page.render({ 
+        canvasContext: ctx, 
+        viewport: scaledViewport
+      })
       renderTaskRef.current = renderTask
 
       try {
         await renderTask.promise
+        console.log('PDF renderizado exitosamente')
       } catch (err) {
-        if (err?.name === 'RenderingCancelledException') return
+        if (err?.name === 'RenderingCancelledException') {
+          console.log('Renderizado cancelado')
+          return
+        }
         throw err
       }
       renderTaskRef.current = null
@@ -175,6 +256,11 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
     } catch (err) {
       console.error('Error al renderizar preview:', err)
     }
+  } finally {
+    // Resetear flags de renderizado
+    renderTaskRef.current = null
+    isRenderingRef.current = false
+  }
   }
 
   return (
@@ -186,9 +272,7 @@ function PreviewFirmasSolicitud({ solicitud, plantilla }) {
           </Tag>
         ))}
       </div>
-      <div ref={containerRef} style={{ width: '100%' }}>
-        <canvas ref={canvasRef} style={{ width: '100%', border: '1px solid #d9d9d9' }} />
-      </div>
+      <div ref={containerRef} style={{ width: '100%', border: '1px solid #d9d9d9' }}></div>
     </div>
   )
 }

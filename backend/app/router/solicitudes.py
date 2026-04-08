@@ -138,7 +138,9 @@ async def crear_solicitud(
         ruta = f"{carpeta}/{nombre_archivo}"
         with open(ruta, "wb") as f:
             f.write(contenido)
-        crud_solicitudes.create_documento_solicitud(db, solicitud_id, documento_id, ruta)
+        # Guardar la URL relativa con barra inicial para que sea /uploads/...
+        archivo_url = f"/{ruta}"
+        crud_solicitudes.create_documento_solicitud(db, solicitud_id, documento_id, archivo_url)
 
     tipo_nombre = next(
         (d["nombre"] for d in crud_solicitudes.get_tipo_programas(db) if d["id"] == tipo_programa_id), ""
