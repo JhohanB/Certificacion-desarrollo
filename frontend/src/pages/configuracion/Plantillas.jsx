@@ -251,7 +251,13 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
   const cargarPDF = async () => {
     try {
       const url = `${API_URL}/${plantilla.archivo_url}`
-      const pdf = await pdfjsLib.getDocument(url).promise
+      const loadingTask = pdfjsLib.getDocument({
+        url,
+        httpHeaders: {
+          Authorization: `Bearer ${sessionStorage.getItem('access_token')}`
+        }
+      })
+      const pdf = await loadingTask.promise
       const page = await pdf.getPage(1)
       setPdfPage(page)
     } catch (err) {

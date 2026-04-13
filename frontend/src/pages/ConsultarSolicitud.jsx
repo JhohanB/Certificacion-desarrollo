@@ -194,9 +194,9 @@ export default function ConsultarSolicitud() {
                 <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 12, display: 'block' }} />
                 <Title level={5} style={{ color: '#52c41a' }}>¡Proceso completado!</Title>
                 <Text type="secondary">
-                  Para descargar tu certificado ingresa al portal del aprendiz en{' '}
-                  <a href="https://www.sena.edu.co" target="_blank" rel="noreferrer">
-                    www.sena.edu.co
+                  Para descargar tu certificado ingresa a {' '}
+                  <a href="https://certificados.sena.edu.co" target="_blank" rel="noreferrer">
+                    certificados.sena.edu.co
                   </a>
                 </Text>
               </div>

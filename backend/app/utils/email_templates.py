@@ -124,6 +124,7 @@ def _base_template(contenido: str) -> str:
         <div class="container">
             <div class="header">
                 <h1>SENA</h1>
+                <h2 style="color: #ffffff;">Centro Atención Sector Agropecuario Regional Risaralda</h2>
                 <p>Sistema de Gestión de Certificaciones</p>
             </div>
             <div class="body">
@@ -224,7 +225,7 @@ def template_observaciones_completas(nombre: str, programa: str, docs_observados
 # Template: Solicitud certificada
 # -------------------------------------------------------
 
-def template_solicitud_certificada(nombre: str, programa: str, base_url: str) -> str:
+def template_solicitud_certificada(nombre: str, programa: str, frontend_url: str) -> str:
     contenido = f"""
         <h2>¡Felicitaciones, fuiste certificado!</h2>
         <p>Hola <strong>{nombre}</strong>,</p>
@@ -237,10 +238,9 @@ def template_solicitud_certificada(nombre: str, programa: str, base_url: str) ->
 
         <p><strong>¿Cómo descargar tu certificado?</strong></p>
         <div class="info-box">
-            <p>1. Ingresa al portal del aprendiz SENA: <strong>www.sena.edu.co</strong></p>
-            <p>2. Inicia sesión con tu usuario y contraseña</p>
-            <p>3. Dirígete a la sección <strong>Certificados</strong></p>
-            <p>4. Descarga tu certificado de formación</p>
+            <p>1. Ingresa al portal de certificados SENA: <strong>https://certificados.sena.edu.co</strong></p>
+            <p>2. Seleccione su tipo de documento, digite el número y haga clic en "Consultar"</p>
+            <p>3. Descarga tu certificado de formación</p>
         </div>
 
         <p>¡Gracias por tu dedicación y esfuerzo!</p>

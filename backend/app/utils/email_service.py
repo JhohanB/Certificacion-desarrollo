@@ -26,7 +26,7 @@ conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
     MAIL_PASSWORD=settings.MAIL_PASSWORD,
     MAIL_FROM=settings.MAIL_FROM,
-    MAIL_FROM_NAME="SENA Certificaciones",
+    MAIL_FROM_NAME="Certificaciones SENA Centro Atención Sector Agropecuario Regional Risaralda",
     MAIL_PORT=settings.MAIL_PORT,
     MAIL_SERVER=settings.MAIL_SERVER,
     MAIL_STARTTLS=True,
@@ -198,7 +198,7 @@ async def enviar_bienvenida_funcionario(
         frontend_url=settings.FRONTEND_URL,
     )
     # Bienvenida no tiene solicitud_id
-    await _enviar(correo, "SENA - Bienvenido al sistema de certificaciones", html)
+    await _enviar(correo, "SENA - Bienvenido al sistema de certificaciones del Centro Atención Sector Agropecuario", html)
 
 
 async def enviar_restablecer_password(
