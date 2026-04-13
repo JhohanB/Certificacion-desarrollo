@@ -653,8 +653,24 @@ export default function Reportes() {
           {notificaciones?.correos_fallidos_recientes?.length > 0 && (
             <Col xs={24}>
               <Card title="Correos fallidos recientes" style={{ borderRadius: 12 }}>
-                <Table dataSource={notificaciones.correos_fallidos_recientes}
-                  rowKey="id" size="small" pagination={false} />
+                <Table 
+                  dataSource={notificaciones?.correos_fallidos_recientes || []}
+                  columns={[
+                    { title: 'Solicitud', dataIndex: 'solicitud_id', key: 'solicitud_id' },
+                    { title: 'Correo', dataIndex: 'destinatario', key: 'destinatario' },
+                    { title: 'Tipo', dataIndex: 'tipo_notificacion', key: 'tipo_notificacion',
+                      render: (text) => 
+                        text 
+                        ?.toLowerCase() 
+                        .replace(/_/g, ' ') 
+                        .replace(/\b\w/g, l => l.toUpperCase()), 
+                    },
+                    { title: 'Fecha', dataIndex: 'fecha_envio', key: 'fecha_envio'},
+                    { title: 'Error', dataIndex: 'error_mensaje', key: 'error_mensaje',},
+                  ]}
+                  rowKey={(record) => `${record.solicitud_id}-${record.fecha_envio}`} 
+                  size="small" 
+                  pagination={false} />
               </Card>
             </Col>
           )}
