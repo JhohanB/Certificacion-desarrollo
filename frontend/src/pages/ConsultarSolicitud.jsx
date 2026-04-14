@@ -130,7 +130,7 @@ export default function ConsultarSolicitud() {
           </Button>
         </Form>
 
-        {error && <Alert message={error} type="error" showIcon style={{ marginTop: 16 }} />}
+        {error && <Alert title={error} type="error" showIcon style={{ marginTop: 16 }} />}
       </Card>
 
       {/* Resultado */}
@@ -156,7 +156,7 @@ export default function ConsultarSolicitud() {
           {/* Progreso */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <Steps
-              direction="vertical"
+              orientation="vertical"
               size="small"
               current={indiceActual}
               style={{ maxWidth: 400 }}
@@ -208,7 +208,7 @@ export default function ConsultarSolicitud() {
             <>
               <Divider />
               <Alert
-                message="Observaciones del funcionario"
+                title="Observaciones del funcionario"
                 description={solicitud.observaciones_generales}
                 type="warning"
                 showIcon

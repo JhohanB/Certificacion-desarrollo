@@ -43,20 +43,47 @@ export function AuthProvider({ children }) {
       })
   }, [])
 
+  useEffect(() => {
+    if (!usuario?.roles) {
+      setRolActivo(null)
+      return
+    }
+
+    const rolGuardado = sessionStorage.getItem('rol_activo')
+
+    let rol = null
+
+    if (rolGuardado) {
+      try {
+        const parsed = JSON.parse(rolGuardado)
+        rol = usuario.roles.find(r => r.id === parsed.id)
+      } catch {}
+    }
+
+    if (!rol) {
+      if (usuario.roles.length === 1) {
+        rol = usuario.roles[0]
+        sessionStorage.setItem('rol_activo', JSON.stringify(rol))
+      } else {
+        setRolActivo(null)
+        return
+      }
+    }
+
+    setRolActivo(rol)
+  }, [usuario])
+
   const login = useCallback((datos) => {
     sessionStorage.setItem('access_token', datos.access_token)
     sessionStorage.setItem('refresh_token', datos.refresh_token)
     sessionStorage.setItem('usuario', JSON.stringify(datos.usuario))
-    sessionStorage.removeItem('rol_activo')
   }, [])
 
   const loginCompleto = useCallback((datos) => {
     sessionStorage.setItem('access_token', datos.access_token)
     sessionStorage.setItem('refresh_token', datos.refresh_token)
     sessionStorage.setItem('usuario', JSON.stringify(datos.usuario))
-    sessionStorage.removeItem('rol_activo')
     setUsuario(datos.usuario)
-    setRolActivo(null)
   }, [])
 
   const seleccionarRol = useCallback((rol) => {

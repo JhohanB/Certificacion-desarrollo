@@ -554,7 +554,7 @@ export default function DetalleSolicitud() {
   // Permisos
   // -------------------------------------------------------
   if (cargando) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />
-  if (error) return <Alert message={error} type="error" showIcon />
+  if (error) return <Alert title={error} type="error" showIcon />
   if (!solicitud) return null
 
   const puedeVerDocumentos = tieneAccesoCompleto || (esFirmante && !yaFirme) || (esCoordinador && !yaFirme)
@@ -807,7 +807,7 @@ export default function DetalleSolicitud() {
 
         {solicitud.observaciones_generales && !enRevision && (
           <Alert
-            message="Observaciones del funcionario"
+            title="Observaciones del funcionario"
             description={solicitud.observaciones_generales}
             type="warning"
             showIcon
@@ -842,7 +842,7 @@ export default function DetalleSolicitud() {
           <Alert
             type="error"
             showIcon
-            message="Esta solicitud fue rechazada por un firmante"
+            title="Esta solicitud fue rechazada por un firmante"
             description={solicitud.observaciones_generales}
             style={{ marginBottom: 16 }}
           />
@@ -957,7 +957,7 @@ export default function DetalleSolicitud() {
             <Alert
               type="warning"
               showIcon
-              message="Rechazo por documentos"
+              title="Rechazo por documentos"
               description="El firmante rechazó esta solicitud por problemas en los documentos. Debes revisar cuidadosamente las observaciones anteriores y marcar como OBSERVADO los documentos correspondientes. Luego notifica al aprendiz para que los corrija."
               style={{ marginTop: 12 }}
             />
@@ -966,7 +966,7 @@ export default function DetalleSolicitud() {
             <Alert
               type="info"
               showIcon
-              message="Al notificar al aprendiz se le enviará un correo informativo con los datos del firmante que rechazó, sin enlace de corrección."
+              title="Al notificar al aprendiz se le enviará un correo informativo con los datos del firmante que rechazó, sin enlace de corrección."
               style={{ marginTop: 12 }}
             />
           )}
@@ -986,7 +986,7 @@ export default function DetalleSolicitud() {
                   key={i}
                   type="warning"
                   showIcon
-                  message={r.descripcion}
+                  title={r.descripcion}
                   description={new Date(r.fecha_cambio).toLocaleString('es-CO')}
                   style={{ marginBottom: 8 }}
                 />
@@ -1221,13 +1221,13 @@ export default function DetalleSolicitud() {
           <Alert
             type="info"
             showIcon
-            message="Si hay documentos observados u observaciones generales, se notificará al aprendiz. Si todo está aprobado, pasará a firmas."
+            title="Si hay documentos observados u observaciones generales, se notificará al aprendiz. Si todo está aprobado, pasará a firmas."
             style={{ marginBottom: 16 }}
           />
           <Alert
             type="info"
             showIcon
-            message={
+            title={
               solicitud.coordinador_id
                 ? "El coordinador ya fue asignado anteriormente. Puedes cambiarlo si es necesario."
                 : "Selecciona el coordinador que firmará esta solicitud."
@@ -1296,7 +1296,7 @@ export default function DetalleSolicitud() {
           <Alert
             type="warning"
             showIcon
-            message="Al firmar confirmas que has revisado todos los documentos"
+            title="Al firmar confirmas que has revisado todos los documentos"
             style={{ marginBottom: 16 }}
           />
           <Form.Item name="password" label="Confirma tu contraseña para firmar"
@@ -1366,7 +1366,7 @@ export default function DetalleSolicitud() {
         ]}
       >
         <Alert
-          message="¿Confirmas que deseas certificar esta solicitud?"
+          title="¿Confirmas que deseas certificar esta solicitud?"
           description="Esta acción marcará la solicitud como CERTIFICADA y no podrá revertirse."
           type="warning"
           showIcon

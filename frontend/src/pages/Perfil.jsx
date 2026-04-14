@@ -44,10 +44,10 @@ export default function Perfil() {
     setError(null)
     try {
       await api.put(`/usuarios/${usuario.id}`, values)
-      const usuarioActualizado = { ...usuario, ...values }
+      const { data } = await api.get('/auth/me')
       const accessToken = sessionStorage.getItem('access_token')
       const refreshToken = sessionStorage.getItem('refresh_token')
-      login({ access_token: accessToken, refresh_token: refreshToken, usuario: usuarioActualizado })
+      login({ access_token: accessToken, refresh_token: refreshToken, usuario: data })
       setExito(true)
     } catch (err) {
       setError(err.response?.data?.detail ?? 'Error al actualizar')

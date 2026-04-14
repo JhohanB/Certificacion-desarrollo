@@ -147,7 +147,7 @@ export default function Auditoria() {
       </div>
 
       <Card style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Input
             placeholder="Buscar por descripción, usuario o tabla..."
             prefix={<SearchOutlined />}

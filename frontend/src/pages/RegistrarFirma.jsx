@@ -113,7 +113,7 @@ export default function RegistrarFirma() {
         <Alert
           type="info"
           showIcon
-          message="Recomendaciones para la firma"
+          title="Recomendaciones para la firma"
           description="Usa una imagen con fondo blanco o transparente. El sistema eliminará el fondo automáticamente. Formatos permitidos: JPG, PNG."
           style={{ marginBottom: 24 }}
         />
@@ -122,7 +122,7 @@ export default function RegistrarFirma() {
           <Alert
             type="error"
             showIcon
-            message={error}
+            title={error}
             style={{ marginBottom: 16 }}
           />
         )}

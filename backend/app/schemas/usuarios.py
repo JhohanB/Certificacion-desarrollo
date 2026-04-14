@@ -28,6 +28,7 @@ class UsuarioCreate(UsuarioBase):
 # -------------------------------------------------------
 
 class UsuarioUpdate(BaseModel):
+    documento: Optional[str] = Field(default=None, min_length=5, max_length=20)
     nombre_completo: Optional[str] = Field(default=None, min_length=3, max_length=150)
     correo: Optional[EmailStr] = None
     telefono: Optional[str] = Field(default=None, min_length=7, max_length=20)

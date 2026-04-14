@@ -156,7 +156,7 @@ export default function Plantillas() {
       </div>
 
       <Alert type="info" showIcon
-        message="La plantilla activa se usa como base para el paz y salvo en todas las nuevas solicitudes."
+        title="La plantilla activa se usa como base para el paz y salvo en todas las nuevas solicitudes."
         style={{ marginBottom: 16 }} />
 
       <Card style={{ borderRadius: 12 }}>
@@ -171,7 +171,7 @@ export default function Plantillas() {
         onCancel={() => { setModalSubir(false); setArchivo(null); setVersion('') }}
         footer={null}>
         <Alert type="warning" showIcon
-          message="La plantilla debe ser el PDF base del paz y salvo sin firmas."
+          title="La plantilla debe ser el PDF base del paz y salvo sin firmas."
           style={{ marginBottom: 16 }} />
         <div style={{ marginBottom: 16 }}>
           <Text strong>Versión:</Text>
@@ -320,7 +320,7 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
     canvas.width = scaledViewport.width
     canvas.height = scaledViewport.height
  
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
     const renderTask = pdfPage.render({ canvasContext: ctx, viewport: scaledViewport })
     renderTaskRef.current = renderTask
  
@@ -525,7 +525,7 @@ function EditorCoordenadas({ plantilla, open, onClose, onGuardado }) {
 
           <Alert
             type="info" showIcon
-            message="3. Dibuja el rectángulo en el PDF arrastrando el mouse."
+            title="3. Dibuja el rectángulo en el PDF arrastrando el mouse."
             style={{ marginBottom: 16, fontSize: 12 }}
           />
 

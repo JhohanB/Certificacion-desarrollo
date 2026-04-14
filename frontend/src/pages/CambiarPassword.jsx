@@ -102,7 +102,7 @@ export default function CambiarPassword() {
           <Alert
             type="warning"
             showIcon
-            message="Debes cambiar tu contraseña temporal antes de continuar"
+            title="Debes cambiar tu contraseña temporal antes de continuar"
             style={{ marginBottom: 24 }}
           />
         )}
@@ -111,7 +111,7 @@ export default function CambiarPassword() {
           <Alert
             type="error"
             showIcon
-            message={error}
+            title={error}
             style={{ marginBottom: 24 }}
           />
         )}

@@ -147,10 +147,12 @@ def actualizar_usuario(
     Actualiza datos básicos de un funcionario.
     Cada funcionario solo puede actualizar sus propios datos.
     """
-    if current_user["id"] != usuario_id:
+    roles_usuario = [r["nombre"] for r in current_user["roles"]]
+
+    if "ADMIN" not in roles_usuario and current_user["id"] != usuario_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo puede actualizar sus propios datos"
+            detail="No tiene permisos para editar este usuario"
         )
 
     usuario = crud_usuarios.get_usuario_by_id(db, usuario_id)
@@ -159,6 +161,28 @@ def actualizar_usuario(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado"
         )
+    
+    # Validar duplicados
+    fields = datos.model_dump(exclude_unset=True)
+
+    # Validar correo
+    if "correo" in fields:
+        existente = crud_usuarios.get_usuario_by_correo(db, fields["correo"])
+        if existente and existente["id"] != usuario_id:
+            raise HTTPException(
+                status_code=400,
+                detail="El correo ya está en uso"
+            )
+
+    # Validar documento
+    if "documento" in fields:
+        if crud_usuarios.exists_by_documento(db, fields["documento"]):
+            usuario_actual = crud_usuarios.get_usuario_by_id(db, usuario_id)
+            if usuario_actual["documento"] != fields["documento"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El documento ya está en uso"
+                )
 
     crud_usuarios.update_usuario(db, usuario_id, datos)
     return {"message": "Datos actualizados correctamente"}

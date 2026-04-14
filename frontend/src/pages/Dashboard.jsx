@@ -330,7 +330,7 @@ function DashboardFirmante({ data, onVerSolicitud }) {
           <Alert
             type="warning"
             showIcon
-            message="Estas solicitudes fueron rechazadas por ti. Si ya se corrigieron, comunicate con el encargado de certificación."
+            title="Estas solicitudes fueron rechazadas por ti. Si ya se corrigieron, comunicate con el encargado de certificación."
             style={{ marginBottom: 16 }}
           />
           <Table
@@ -459,7 +459,7 @@ function DashboardCoordinador({ data, onVerSolicitud }) {
           <Alert
             type="warning"
             showIcon
-            message="Estas solicitudes fueron rechazadas por ti. Si ya se corrigieron, comunicate con el encargado de certificación."
+            title="Estas solicitudes fueron rechazadas por ti. Si ya se corrigieron, comunicate con el encargado de certificación."
             style={{ marginBottom: 16 }}
           />
           <Table
@@ -507,7 +507,7 @@ export default function Dashboard() {
   const onVerSolicitud = (id) => navigate(`/solicitudes/${id}`)
 
   if (cargando) return <Spin size="large" style={{ display: 'block', margin: '80px auto' }} />
-  if (error) return <Alert message={error} type="error" showIcon />
+  if (error) return <Alert title={error} type="error" showIcon />
 
   const roles = usuario?.roles?.map(r => r.nombre) ?? []
 

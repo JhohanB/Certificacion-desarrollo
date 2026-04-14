@@ -207,7 +207,7 @@ export default function NuevaSolicitud() {
           <Steps.Step title="Documentos" />
         </Steps>
 
-        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 24 }} />}
+        {error && <Alert title={error} type="error" showIcon style={{ marginBottom: 24 }} />}
 
         {/* Paso 1 */}
         {pasoActual === 0 && (
@@ -279,7 +279,7 @@ export default function NuevaSolicitud() {
         {pasoActual === 2 && (
           <div>
             {documentosRequeridos.length === 0 ? (
-              <Alert message="No se encontraron documentos para este nivel de formación" type="warning" showIcon />
+              <Alert title="No se encontraron documentos para este nivel de formación" type="warning" showIcon />
             ) : (
               documentosRequeridos.map(doc => {
                 const archivoSubido = archivos[doc.id]

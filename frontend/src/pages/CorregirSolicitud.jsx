@@ -235,7 +235,7 @@ export default function CorregirSolicitud() {
           <Steps.Step title="Documentos" />
         </Steps>
 
-        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 24 }} />}
+        {error && <Alert title={error} type="error" showIcon style={{ marginBottom: 24 }} />}
 
         {/* Paso 1 — Datos personales */}
         {pasoActual === 0 && (
@@ -340,7 +340,7 @@ export default function CorregirSolicitud() {
 
                       {doc.observaciones && (
                         <Alert
-                          message={doc.observaciones}
+                          title={doc.observaciones}
                           type="warning"
                           showIcon
                           style={{ marginBottom: 8, fontSize: 12 }}
@@ -386,7 +386,7 @@ export default function CorregirSolicitud() {
 
             {documentosNoAprobados.length === 0 && (
               <Alert
-                message="Todos tus documentos están aprobados. Solo se enviaron correcciones de datos."
+                title="Todos tus documentos están aprobados. Solo se enviaron correcciones de datos."
                 type="success"
                 showIcon
               />

@@ -83,7 +83,9 @@ export default function Usuarios() {
     setEnviando(true)
     try {
       await api.put(`/usuarios/${usuarioSeleccionado.id}`, {
+        documento: values.documento,
         nombre_completo: values.nombre_completo,
+        correo: values.correo,
         telefono: values.telefono || null,
       })
       message.success('Usuario actualizado')
@@ -121,7 +123,9 @@ export default function Usuarios() {
   const abrirEditar = (usuario) => {
     setUsuarioSeleccionado(usuario)
     formEditar.setFieldsValue({
+      documento: usuario.documento,
       nombre_completo: usuario.nombre_completo,
+      correo: usuario.correo,
       telefono: usuario.telefono,
     })
     setModalEditar(true)
@@ -189,7 +193,7 @@ export default function Usuarios() {
       title: 'Estado',
       key: 'estado',
       render: (_, u) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Tag color={u.activo ? 'green' : 'red'}>
             {u.activo ? 'Activo' : 'Inactivo'}
           </Tag>
@@ -330,7 +334,7 @@ export default function Usuarios() {
           <Alert
             type="info"
             showIcon
-            message="Se generará una contraseña temporal y se enviará al correo del usuario."
+            title="Se generará una contraseña temporal y se enviará al correo del usuario."
             style={{ marginBottom: 16 }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -357,8 +361,19 @@ export default function Usuarios() {
         footer={null}
       >
         <Form form={formEditar} layout="vertical" onFinish={editarUsuario}>
+          <Form.Item name="documento" label="Documento"
+            rules={[{ required: true, message: 'Ingresa el documento' }]}>
+            <Input />
+          </Form.Item>
           <Form.Item name="nombre_completo" label="Nombre completo"
             rules={[{ required: true, message: 'Ingresa el nombre' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="correo" label="Correo"
+            rules={[
+              { required: true, message: 'Ingresa el correo' },
+              { type: 'email', message: 'Correo inválido' }
+            ]}>
             <Input />
           </Form.Item>
           <Form.Item name="telefono" label="Teléfono (opcional)">
