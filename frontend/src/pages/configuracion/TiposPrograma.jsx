@@ -508,7 +508,7 @@ export default function TiposPrograma() {
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       Orden: {doc.posicion ?? '-'}
                     </Text>
-                    <Space split={<span style={{ color: '#ccc' }}>|</span>}>
+                    <Space separator={<span style={{ color: '#ccc' }}>|</span>}>
                       <Button size="small" icon={<ArrowUpOutlined />}
                         disabled={doc.orden_documento === 1 || tipoSeleccionado?.documentos?.[0]?.id === doc.id}
                         onClick={() => moverDocumento(doc.id, 'up')}
