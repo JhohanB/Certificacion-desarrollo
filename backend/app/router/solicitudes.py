@@ -255,10 +255,10 @@ async def reenviar_observaciones(
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-    if solicitud["estado_actual"] != "CON_OBSERVACIONES":
+    if solicitud["estado_actual"] not in ["PENDIENTE_REVISION", "CON_OBSERVACIONES"]:
         raise HTTPException(
-            status_code=400, 
-            detail="Solo se pueden reenviar observaciones cuando la solicitud está en CON_OBSERVACIONES"
+            status_code=400,
+            detail="Solo se pueden reenviar observaciones cuando la solicitud está en revisión o con observaciones"
         )
 
     # Verificar tipo de rechazo de la firma rechazada
@@ -274,18 +274,19 @@ async def reenviar_observaciones(
     obs = solicitud.get("observaciones_generales") or ""
 
     # Validar que haya algo que reenviar
-    if not obs:
-        raise HTTPException(status_code=400, detail="No hay observaciones generales para reenviar")
+    if not obs and not docs_observados:
+        raise HTTPException(status_code=400, detail="No hay observaciones generales ni documentos observados para reenviar")
 
     tipo_rechazo = firma_rechazada["tipo_rechazo"] if firma_rechazada else "POR_DOCUMENTOS"
 
     if tipo_rechazo == "POR_OTRA_RAZON":
         # Reenviar correo informativo sin token
+        motivo_envio = obs or "Se han observado documentos en tu solicitud. Revisa el proceso para corregirlos."
         await enviar_notificacion_rechazo_externo(
             correo=solicitud["correo_aprendiz"],
             nombre=solicitud["nombre_aprendiz"],
             programa=solicitud["nombre_programa"],
-            motivo=obs,
+            motivo=motivo_envio,
             nombre_funcionario_rechazo=firma_rechazada["nombre_completo"] if firma_rechazada else current_user["nombre_completo"],
             correo_funcionario_rechazo=firma_rechazada["correo"] if firma_rechazada else current_user["correo"],
             solicitud_id=solicitud_id,

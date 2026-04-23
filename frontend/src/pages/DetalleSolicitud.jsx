@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, memo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, memo, Suspense, lazy } from 'react'
 import {
   Card, Typography, Tag, Button, Descriptions, Table,
   Modal, Form, Input, Alert, Spin, Space, Popconfirm, message,
@@ -12,6 +12,9 @@ import {
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api, { API_URL } from '../api/axios'
+
+// Lazy load del componente pesado de preview de firmas
+const PreviewFirmasSolicitud = lazy(() => import('./components/PreviewFirmasSolicitud'))
 
 const { Title, Text } = Typography
 
@@ -80,189 +83,6 @@ function ObservarDocumento({ doc, onObservar }) {
 }
 
 
-const PreviewFirmasSolicitud = memo(function PreviewFirmasSolicitud({ solicitud, plantilla }) {
-  const containerRef = useRef(null)
-  const renderTaskRef = useRef(null)
-  const isRenderingRef = useRef(false)
-
-  const COLORES_ROL = {
-    APE: '#fa8c16',
-    BIENESTAR: '#eb2f96',
-    BIBLIOTECA: '#13c2c2',
-    COORDINADOR: '#722ed1',
-    INSTRUCTOR_SEGUIMIENTO: '#52c41a',
-  }
-
-  const plantillaCoordenadas = useMemo(() => plantilla?.coordenadas ?? [], [plantilla?.coordenadas])
-  const primerDoc = useMemo(
-    () => solicitud.documentos?.find(d => d.es_version_activa && d.documento_id === 1),
-    [solicitud?.documentos]
-  )
-
-  const clearCanvas = () => {
-    if (containerRef.current) {
-      containerRef.current.innerHTML = ''
-    }
-  }
-
-  useEffect(() => {
-    renderPreview()
-    
-    // Cleanup cuando el componente se desmonte
-    return () => {
-      if (renderTaskRef.current) {
-        try {
-          renderTaskRef.current.cancel()
-        } catch (e) {
-          // Ignorar errores
-        }
-      }
-      isRenderingRef.current = false
-      clearCanvas()
-    }
-  }, [plantillaCoordenadas, primerDoc])
-
-  const renderPreview = async () => {
-    // Evitar múltiples renderizados simultáneos
-    if (isRenderingRef.current) {
-      return
-    }
-    isRenderingRef.current = true
-
-    try {
-      // Cancelar cualquier renderizado anterior
-      if (renderTaskRef.current) {
-        try {
-          renderTaskRef.current.cancel()
-        } catch (e) {
-          // Ignorar errores de cancelación
-        }
-        renderTaskRef.current = null
-      }
-
-      if (!primerDoc?.archivo_url || !containerRef.current) {
-        isRenderingRef.current = false
-        return
-      }
-
-      const pdfjsLib = await import('pdfjs-dist')
-      const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker?url')
-      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker.default
-
-      // En desarrollo usamos ruta relativa para aprovechar el proxy de Vite y evitar CORS.
-      let archivoUrl = primerDoc.archivo_url
-      if (!archivoUrl.startsWith('/')) {
-        archivoUrl = '/' + archivoUrl
-      }
-      const fullUrl = import.meta.env.DEV ? archivoUrl : `${API_URL}${archivoUrl}`
-      const response = await fetch(fullUrl, { credentials: 'omit' })
-      if (!response.ok) {
-        throw new Error(`Error al cargar PDF: ${response.status} ${response.statusText}`)
-      }
-      const arrayBuffer = await response.arrayBuffer()
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-      const page = await pdf.getPage(1)
-
-      const container = containerRef.current
-      if (!container) {
-        return
-      }
-      const containerWidth = container.clientWidth || 700
-      
-      // Obtener viewport normalizando la rotación para mostrar siempre derecho
-      const viewport = page.getViewport({ scale: 1, rotation: -(page.rotate || 0) })
-      const scale = (containerWidth - 16) / viewport.width
-      const scaledViewport = page.getViewport({ scale, rotation: -(page.rotate || 0) })
-
-      // Limpiar contenido anterior
-      container.innerHTML = ''
-
-      // Crear nuevo canvas estable para render
-      const canvas = document.createElement('canvas')
-      canvas.style.width = '100%'
-      canvas.style.height = 'auto'
-      canvas.setAttribute('aria-label', 'Previsualización de firmas')
-      container.appendChild(canvas)
-
-      canvas.width = Math.round(scaledViewport.width)
-      canvas.height = Math.round(scaledViewport.height)
-
-      const ctx = canvas.getContext('2d')
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      
-      const renderTask = page.render({ 
-        canvasContext: ctx, 
-        viewport: scaledViewport
-      })
-      renderTaskRef.current = renderTask
-
-      try {
-        await renderTask.promise
-      } catch (err) {
-        if (err?.name === 'RenderingCancelledException') {
-          return
-        }
-        throw err
-      }
-      renderTaskRef.current = null
-
-      // Dibujar coordenadas
-      plantillaCoordenadas.forEach(coord => {
-        const color = COLORES_ROL[coord.nombre_rol] ?? '#004A2F'
-
-        const x = (coord.x_porcentaje / 100) * canvas.width
-        const y = (coord.y_porcentaje / 100) * canvas.height
-        const w = (coord.ancho_porcentaje / 100) * canvas.width
-        const h = (coord.alto_porcentaje / 100) * canvas.height
-
-        const nx = (coord.nombre_x_porcentaje / 100) * canvas.width
-        const ny = (coord.nombre_y_porcentaje / 100) * canvas.height
-        const nw = (coord.nombre_ancho_porcentaje / 100) * canvas.width
-        const nh = (coord.nombre_alto_porcentaje / 100) * canvas.height
-
-        // Caja firma
-        ctx.strokeStyle = color
-        ctx.lineWidth = 2
-        ctx.setLineDash([])
-        ctx.strokeRect(x, y, w, h)
-        ctx.fillStyle = color + '33'
-        ctx.fillRect(x, y, w, h)
-
-        // Caja nombre
-        ctx.setLineDash([5, 3])
-        ctx.strokeRect(nx, ny, nw, nh)
-        ctx.fillStyle = color + '22'
-        ctx.fillRect(nx, ny, nw, nh)
-        ctx.setLineDash([])
-
-        // Etiqueta
-        ctx.fillStyle = color
-        ctx.font = 'bold 11px Arial'
-        ctx.fillText(coord.nombre_rol, x + 2, y - 4)
-      })
-    } catch (err) {
-      console.error('Error al renderizar preview:', err)
-    } finally {
-      // Resetear flags de renderizado
-      renderTaskRef.current = null
-      isRenderingRef.current = false
-    }
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {plantilla.coordenadas?.map(c => (
-          <Tag key={c.id} color={COLORES_ROL[c.nombre_rol] ?? '#004A2F'}>
-            {c.nombre_rol}
-          </Tag>
-        ))}
-      </div>
-      <div ref={containerRef} style={{ width: '100%', border: '1px solid #d9d9d9', minHeight: '600px' }}></div>
-    </div>
-  )
-});
-
 // -------------------------------------------------------
 // Componente principal
 // -------------------------------------------------------
@@ -306,6 +126,9 @@ export default function DetalleSolicitud() {
   const [historialObs, setHistorialObs] = useState(null)
   const [historialEstados, setHistorialEstados] = useState([])
 
+  const hayDocumentosObservados = solicitud?.documentos?.some(d => d.estado_documento === 'OBSERVADO')
+  const tieneObservacionesParaReenviar = hayDocumentosObservados || !!solicitud?.observaciones_generales
+
   // Roles
   const rolesObjetos = rolActivo ? [rolActivo] : (usuario?.roles ?? [])
   const esAdmin = !!rolesObjetos.some(r => r.es_admin)
@@ -320,20 +143,22 @@ export default function DetalleSolicitud() {
   )
 
   // -------------------------------------------------------
-  // Carga de datos
+  // Carga de datos optimizada - combinar requests donde sea posible
   // -------------------------------------------------------
   const cargar = async () => {
     setCargando(true)
     setError(null)
     try {
-      const [resSolicitud, resFirmas] = await Promise.all([
+      // Combinar requests principales en paralelo
+      const [resSolicitud, resFirmas, resHistorial] = await Promise.all([
         api.get(`/solicitudes/${id}`),
-        api.get(`/documentos/${id}/firmas`).catch(() => ({ data: [] }))
+        api.get(`/documentos/${id}/firmas`).catch(() => ({ data: [] })),
+        api.get(`/solicitudes/${id}/historial-estados`).catch(() => ({ data: [] }))
       ])
-      const resHistorial = await api.get(`/solicitudes/${id}/historial-estados`).catch(() => ({ data: [] }))
-      setHistorialEstados(resHistorial.data)
+
       setSolicitud(resSolicitud.data)
       setFirmas(resFirmas.data)
+      setHistorialEstados(resHistorial.data)
       setDocumentos(resSolicitud.data.documentos?.filter(d => d.es_version_activa) ?? [])
     } catch {
       setError('No se pudo cargar la solicitud')
@@ -344,50 +169,41 @@ export default function DetalleSolicitud() {
 
   useEffect(() => { cargar() }, [id])
 
+  // Cargar datos adicionales después de la solicitud principal
   useEffect(() => {
     if (!solicitud) return
-    const cargarDocumentos = async () => {
-      try {
-        const { data } = await api.get(`/solicitudes/documentos-requeridos/${solicitud.tipo_programa_id}`)
-        setTodosDocumentos(data)
-      } catch {}
-    }
-    cargarDocumentos()
-  }, [solicitud?.tipo_programa_id])
 
-  useEffect(() => {
-    // Si está CORREGIDO no cargar observaciones anteriores
-    if (solicitud?.estado_actual === 'CORREGIDO') {
-      setObservacionesGenerales('')
-    } else {
-      setObservacionesGenerales(solicitud?.observaciones_generales ?? '')
-    }
-  }, [solicitud?.observaciones_generales, solicitud?.estado_actual])
+    const cargarDatosAdicionales = async () => {
+      const promises = []
 
-  // Cargar coordinadores
-  useEffect(() => {
-    if (!esFuncionario && !esAdmin) return
-    const cargarCoordinadores = async () => {
-      try {
-        const { data } = await api.get('/usuarios/coordinadores')
-        setCoordinadores(data)
-      } catch (err) {
-        message.error('Error al cargar coordinadores')
-        setCoordinadores([])
+      // Cargar documentos requeridos
+      promises.push(
+        api.get(`/solicitudes/documentos-requeridos/${solicitud.tipo_programa_id}`)
+          .then(({ data }) => setTodosDocumentos(data))
+          .catch(() => {})
+      )
+
+      // Cargar plantilla activa
+      promises.push(
+        api.get('/plantillas/activa')
+          .then(({ data }) => setPlantillaActiva(data))
+          .catch(() => {})
+      )
+
+      // Cargar coordinadores solo si es necesario
+      if (esFuncionario || esAdmin) {
+        promises.push(
+          api.get('/usuarios/coordinadores')
+            .then(({ data }) => setCoordinadores(data))
+            .catch(() => setCoordinadores([]))
+        )
       }
-    }
-    cargarCoordinadores()
-  }, [esFuncionario, esAdmin])
 
-  useEffect(() => {
-    const cargarPlantilla = async () => {
-      try {
-        const { data } = await api.get('/plantillas/activa')
-        setPlantillaActiva(data)
-      } catch {}
+      await Promise.all(promises)
     }
-    cargarPlantilla()
-  }, [])
+
+    cargarDatosAdicionales()
+  }, [solicitud, esFuncionario, esAdmin])
 
   
   useEffect(() => {
@@ -816,10 +632,10 @@ export default function DetalleSolicitud() {
         )}
       </Card>
 
-      {esFuncionario && solicitud.observaciones_generales && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual === null && (
+      {esFuncionario && tieneObservacionesParaReenviar && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual === null && (
         <Popconfirm
           title="¿Reenviar las observaciones al aprendiz?"
-          description={solicitud.observaciones_generales}
+          description={solicitud.observaciones_generales || 'Se reenviarán las observaciones de documentos.'}
           onConfirm={async () => {
             try {
               await api.post(`/solicitudes/${id}/reenviar-observaciones`)
@@ -837,7 +653,7 @@ export default function DetalleSolicitud() {
         </Popconfirm>
       )}
 
-      {esFuncionario && solicitud.observaciones_generales && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual !== null && (
+      {esFuncionario && tieneObservacionesParaReenviar && ['PENDIENTE_REVISION', 'CON_OBSERVACIONES'].includes(solicitud.estado_actual) && tipoRechazoActual !== null && (
         <Card style={{ borderRadius: 12, marginBottom: 16, border: '1px solid #ff4d4f' }}>
           <Alert
             type="error"
@@ -1469,11 +1285,20 @@ export default function DetalleSolicitud() {
           width="90vw"
           style={{ maxWidth: 900 }}
         >
-          <PreviewFirmasSolicitud
-            key={documentos.map(d => d.id + d.archivo_url).join('-')}
-            solicitud={solicitud}
-            plantilla={plantillaActiva}
-          />
+          <Suspense fallback={
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: 16, color: '#666' }}>
+                Cargando previsualización...
+              </div>
+            </div>
+          }>
+            <PreviewFirmasSolicitud
+              key={documentos.map(d => d.id + d.archivo_url).join('-')}
+              solicitud={solicitud}
+              plantilla={plantillaActiva}
+            />
+          </Suspense>
         </Modal>
       )}
     </div>

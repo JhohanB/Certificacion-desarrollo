@@ -1,27 +1,31 @@
+import React, { Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { Spin } from 'antd'
 import Login from './pages/Login'
 import AppLayout from './components/Layout'
-import Dashboard from './pages/Dashboard'
 import Inicio from './pages/Inicio'
 import NuevaSolicitud from './pages/NuevaSolicitud'
 import ConsultarSolicitud from './pages/ConsultarSolicitud'
-import Solicitudes from './pages/Solicitudes'
 import CambiarPassword from './pages/CambiarPassword'
-import DetalleSolicitud from './pages/DetalleSolicitud'
 import RegistrarFirma from './pages/RegistrarFirma'
-import Usuarios from './pages/Usuarios'
 import SeleccionarRol from './pages/SeleccionarRol'
 import CorregirSolicitud from './pages/CorregirSolicitud'
-import TiposPrograma from './pages/configuracion/TiposPrograma'
-import Roles from './pages/configuracion/Roles'
-import Plantillas from './pages/configuracion/Plantillas'
-import Reportes from './pages/Reportes'
-import Auditoria from './pages/Auditoria'
-import Perfil from './pages/Perfil'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Button, Result } from 'antd'
+import PageSkeleton from './components/PageSkeleton'
+
+// Lazy load de páginas privadas para reducir bundle inicial
+const Dashboard = React.lazy(() => import('./pages/Dashboard'))
+const Solicitudes = React.lazy(() => import('./pages/Solicitudes'))
+const DetalleSolicitud = React.lazy(() => import('./pages/DetalleSolicitud'))
+const Usuarios = React.lazy(() => import('./pages/Usuarios'))
+const TiposPrograma = React.lazy(() => import('./pages/configuracion/TiposPrograma'))
+const Roles = React.lazy(() => import('./pages/configuracion/Roles'))
+const Plantillas = React.lazy(() => import('./pages/configuracion/Plantillas'))
+const Reportes = React.lazy(() => import('./pages/Reportes'))
+const Auditoria = React.lazy(() => import('./pages/Auditoria'))
+const Perfil = React.lazy(() => import('./pages/Perfil'))
 
 const Proximamente = ({ titulo }) => (
   <div style={{
@@ -86,16 +90,56 @@ function App() {
 
       {/* Rutas privadas */}
       <Route element={<RutaPrivada />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/solicitudes" element={<Solicitudes />} />
-        <Route path="/solicitudes/:id" element={<DetalleSolicitud />} />
-        <Route path="/usuarios" element={<Usuarios />} />
-        <Route path="/configuracion/programas" element={<TiposPrograma />} />
-        <Route path="/configuracion/roles" element={<Roles />} />
-        <Route path="/configuracion/plantillas" element={<Plantillas />} />
-        <Route path="/reportes" element={<Reportes />} />
-        <Route path="/auditoria" element={<Auditoria />} />
-        <Route path="/perfil" element={<Perfil />} />
+        <Route path="/dashboard" element={
+          <Suspense fallback={<PageSkeleton title="Cargando dashboard..." />}>
+            <Dashboard />
+          </Suspense>
+        } />
+        <Route path="/solicitudes" element={
+          <Suspense fallback={<PageSkeleton title="Cargando solicitudes..." />}>
+            <Solicitudes />
+          </Suspense>
+        } />
+        <Route path="/solicitudes/:id" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <DetalleSolicitud />
+          </Suspense>
+        } />
+        <Route path="/usuarios" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Usuarios />
+          </Suspense>
+        } />
+        <Route path="/configuracion/programas" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <TiposPrograma />
+          </Suspense>
+        } />
+        <Route path="/configuracion/roles" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Roles />
+          </Suspense>
+        } />
+        <Route path="/configuracion/plantillas" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Plantillas />
+          </Suspense>
+        } />
+        <Route path="/reportes" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Reportes />
+          </Suspense>
+        } />
+        <Route path="/auditoria" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Auditoria />
+          </Suspense>
+        } />
+        <Route path="/perfil" element={
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+            <Perfil />
+          </Suspense>
+        } />
         <Route path="/*" element={<div>Página no encontrada</div>} />
       </Route>
     </Routes>

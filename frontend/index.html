@@ -1,10 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Preload de recursos críticos para mejorar LCP -->
+    <link rel="preload" href="/src/main.jsx" as="script" crossorigin>
+    <link rel="modulepreload" href="/src/App.jsx">
+    <link rel="modulepreload" href="/src/pages/Dashboard.jsx">
+
+    <!-- Optimizaciones de performance -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <title>Certificación Centro Atención Sector Agropecuario</title>
+
+    <!-- Meta tags para mejor UX -->
+    <meta name="theme-color" content="#004A2F">
+    <meta name="description" content="Sistema de certificación para el Centro de Atención al Sector Agropecuario">
   </head>
   <body>
     <div id="root"></div>

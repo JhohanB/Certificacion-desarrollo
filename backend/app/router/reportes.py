@@ -536,6 +536,18 @@ def reporte_dashboard(
         """)
         atrasadas = db.execute(query_atrasadas).mappings().first()
 
+        query_certificacion = text("""
+            SELECT s.id, s.nombre_aprendiz, s.nombre_programa,
+                   tp.nombre AS tipo_programa,
+                   s.fecha_solicitud,
+                   DATEDIFF(NOW(), s.fecha_solicitud) AS dias_esperando
+            FROM solicitudes s
+            INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id
+            WHERE s.estado_actual = 'PENDIENTE_CERTIFICACION'
+            ORDER BY s.fecha_solicitud ASC
+        """)
+        certificacion = db.execute(query_certificacion).mappings().all()
+
         # Solicitudes con coordinador inactivo
         from app.crud.usuarios import get_solicitudes_con_coordinador_inactivo
         solicitudes_coordinador_inactivo = get_solicitudes_con_coordinador_inactivo(db)
@@ -543,8 +555,10 @@ def reporte_dashboard(
         return {
             "rol": "FUNCIONARIO_CERTIFICACION",
             "pendientes_revision": list(pendientes),
+            "certificacion_pendiente": list(certificacion),
             "corregidas": list(corregidas),
             "rechazos_recientes": list(rechazos),
+            "total_certificacion": len(certificacion),
             "total_atrasadas": atrasadas["total"],
             "solicitudes_coordinador_inactivo": list(solicitudes_coordinador_inactivo)
         }
@@ -553,8 +567,10 @@ def reporte_dashboard(
     # COORDINADOR
     # -------------------------------------------------------
     if es_coordinador:
+        # Consulta optimizada para pendientes de firma del coordinador
+        # Usamos una subconsulta para determinar el orden mínimo pendiente por solicitud
         query_pendientes_firma = text("""
-            SELECT s.id, s.nombre_aprendiz, s.nombre_programa,
+            SELECT DISTINCT s.id, s.nombre_aprendiz, s.nombre_programa,
                 tp.nombre AS tipo_programa,
                 s.fecha_solicitud,
                 DATEDIFF(NOW(), s.fecha_solicitud) AS dias_esperando
@@ -568,46 +584,54 @@ def reporte_dashboard(
             WHERE f.estado_firma = 'PENDIENTE'
             AND s.estado_actual = 'PENDIENTE_FIRMAS'
             AND f.usuario_id = :usuario_id
-            AND NOT EXISTS (
-                SELECT 1 FROM firmas f2
-                INNER JOIN tipo_programa_roles tpr2 ON tpr2.rol_id = f2.rol_id
-                    AND tpr2.tipo_programa_id = s.tipo_programa_id
-                WHERE f2.solicitud_id = s.id
-                AND f2.estado_firma = 'PENDIENTE'
-                AND f2.rol_id != f.rol_id
-                AND tpr2.orden_firma < tpr.orden_firma
+            AND tpr.orden_firma = (
+                SELECT MIN(tpr_inner.orden_firma)
+                FROM firmas f_inner
+                INNER JOIN tipo_programa_roles tpr_inner ON tpr_inner.rol_id = f_inner.rol_id
+                    AND tpr_inner.tipo_programa_id = s.tipo_programa_id
+                WHERE f_inner.solicitud_id = s.id
+                AND f_inner.estado_firma = 'PENDIENTE'
             )
             ORDER BY s.fecha_solicitud ASC
         """)
         pendientes_firma = db.execute(query_pendientes_firma, {"usuario_id": usuario_id}).mappings().all()
 
+        # Consulta optimizada para contar solicitudes donde solo el coordinador está pendiente
         query_solo_coordinador = text("""
-            SELECT COUNT(*) AS total
+            SELECT COUNT(DISTINCT s.id) AS total
             FROM solicitudes s
+            INNER JOIN firmas f ON f.solicitud_id = s.id
+            INNER JOIN tipo_programa_roles tpr ON tpr.rol_id = f.rol_id
+                AND tpr.tipo_programa_id = s.tipo_programa_id
             WHERE s.estado_actual = 'PENDIENTE_FIRMAS'
+            AND f.estado_firma = 'PENDIENTE'
+            AND tpr.orden_firma = (
+                SELECT MAX(tpr_max.orden_firma)
+                FROM tipo_programa_roles tpr_max
+                WHERE tpr_max.tipo_programa_id = s.tipo_programa_id
+            )
             AND NOT EXISTS (
-                SELECT 1 FROM firmas f2
-                INNER JOIN tipo_programa_roles tpr ON tpr.rol_id = f2.rol_id
-                INNER JOIN solicitudes s2 ON s2.tipo_programa_id = tpr.tipo_programa_id
-                WHERE f2.solicitud_id = s.id
-                AND s2.id = s.id
-                AND f2.estado_firma = 'PENDIENTE'
-                AND tpr.orden_firma < (
-                    SELECT MAX(tpr2.orden_firma)
-                    FROM tipo_programa_roles tpr2
-                    INNER JOIN solicitudes s3 ON s3.tipo_programa_id = tpr2.tipo_programa_id
-                    WHERE s3.id = s.id
-                )
+                SELECT 1 FROM firmas f_other
+                INNER JOIN tipo_programa_roles tpr_other ON tpr_other.rol_id = f_other.rol_id
+                    AND tpr_other.tipo_programa_id = s.tipo_programa_id
+                WHERE f_other.solicitud_id = s.id
+                AND f_other.estado_firma = 'PENDIENTE'
+                AND tpr_other.orden_firma < tpr.orden_firma
             )
         """)
         solo_coordinador = db.execute(query_solo_coordinador).mappings().first()
 
+        # Optimización: Usar CTE para estadísticas mensuales del coordinador
         query_firmadas_mes = text("""
             SELECT COUNT(*) AS total
             FROM firmas f
-            INNER JOIN roles r ON r.id = f.rol_id AND r.es_coordinador = TRUE
-            INNER JOIN usuario_roles ur ON ur.rol_id = f.rol_id AND ur.usuario_id = :usuario_id
             WHERE f.estado_firma = 'FIRMADO'
+            AND f.usuario_id = :usuario_id
+            AND f.rol_id IN (
+                SELECT r.id FROM roles r
+                INNER JOIN usuario_roles ur ON ur.rol_id = r.id
+                WHERE r.es_coordinador = TRUE AND ur.usuario_id = :usuario_id
+            )
             AND MONTH(f.fecha_firma) = MONTH(NOW())
             AND YEAR(f.fecha_firma) = YEAR(NOW())
         """)
@@ -659,7 +683,7 @@ def reporte_dashboard(
     rol_actual = rol_activo["nombre"]
 
     query_pendientes_firma = text("""
-        SELECT s.id, s.nombre_aprendiz, s.nombre_programa,
+        SELECT DISTINCT s.id, s.nombre_aprendiz, s.nombre_programa,
             tp.nombre AS tipo_programa,
             s.fecha_solicitud,
             DATEDIFF(NOW(), s.fecha_solicitud) AS dias_esperando
@@ -668,21 +692,18 @@ def reporte_dashboard(
         INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id
         INNER JOIN roles r ON r.id = f.rol_id AND r.nombre = :rol_actual
         INNER JOIN usuario_roles ur ON ur.rol_id = f.rol_id AND ur.usuario_id = :usuario_id
-        INNER JOIN tipo_programa_roles tpr ON tpr.rol_id = f.rol_id 
+        INNER JOIN tipo_programa_roles tpr ON tpr.rol_id = f.rol_id
             AND tpr.tipo_programa_id = s.tipo_programa_id
         WHERE f.estado_firma = 'PENDIENTE'
         AND s.estado_actual = 'PENDIENTE_FIRMAS'
-        AND (
-            tpr.orden_firma = 0
-            OR NOT EXISTS (
-                SELECT 1 FROM firmas f2
-                INNER JOIN tipo_programa_roles tpr2 ON tpr2.rol_id = f2.rol_id
-                    AND tpr2.tipo_programa_id = s.tipo_programa_id
-                WHERE f2.solicitud_id = s.id
-                AND f2.estado_firma = 'PENDIENTE'
-                AND f2.rol_id != f.rol_id
-                AND tpr2.orden_firma < tpr.orden_firma
-            )
+        AND f.usuario_id = :usuario_id
+        AND tpr.orden_firma = (
+            SELECT MIN(tpr_inner.orden_firma)
+            FROM firmas f_inner
+            INNER JOIN tipo_programa_roles tpr_inner ON tpr_inner.rol_id = f_inner.rol_id
+                AND tpr_inner.tipo_programa_id = s.tipo_programa_id
+            WHERE f_inner.solicitud_id = s.id
+            AND f_inner.estado_firma = 'PENDIENTE'
         )
         ORDER BY s.fecha_solicitud ASC
     """)

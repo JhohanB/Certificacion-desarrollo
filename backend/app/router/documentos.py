@@ -1,9 +1,13 @@
 import os
 import logging
+import tempfile
+import zipfile
 from typing import List
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status, BackgroundTasks
+from fastapi.responses import FileResponse
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -576,6 +580,71 @@ def descargar_pdf(
             "Content-Disposition": f"attachment; filename*=UTF-8''{nombre_encoded}"
         }
     )
+
+
+class CertificadosZipRequest(PydanticBaseModel):
+    ids: List[int]
+
+
+@router.post("/certificados/zip")
+def descargar_certificados_zip(
+    datos: CertificadosZipRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(check_permission("solicitudes", "descargar"))
+):
+    from sqlalchemy import text
+    import urllib.parse
+
+    ids = datos.ids or []
+    if not ids:
+        raise HTTPException(status_code=400, detail="No se proporcionaron ids de solicitudes")
+
+    placeholders = ", ".join([f":id{i}" for i in range(len(ids))])
+    params = {f"id{i}": solicitud_id for i, solicitud_id in enumerate(ids)}
+
+    query = text(f"""
+        SELECT id, numero_documento, nombre_aprendiz, pdf_consolidado_url
+        FROM solicitudes
+        WHERE id IN ({placeholders})
+        AND estado_actual = 'CERTIFICADO'
+        AND pdf_consolidado_url IS NOT NULL
+    """)
+    resultados = db.execute(query, params).mappings().all()
+    if not resultados:
+        raise HTTPException(status_code=404, detail="No hay certificados para las solicitudes seleccionadas")
+
+    temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+    temp_zip.close()
+    archivos_agregados = 0
+
+    with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for fila in resultados:
+            ruta_pdf = fila['pdf_consolidado_url']
+            if not ruta_pdf or not os.path.exists(ruta_pdf):
+                continue
+            nombre_pdf = f"Certificado {fila['numero_documento']} {fila['nombre_aprendiz']}.pdf"
+            zf.write(ruta_pdf, arcname=nombre_pdf)
+            archivos_agregados += 1
+
+    if archivos_agregados == 0:
+        os.remove(temp_zip.name)
+        raise HTTPException(status_code=404, detail="No se encontraron archivos PDF certificados para descargar")
+
+    nombre_zip = f"certificados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    nombre_encoded = urllib.parse.quote(nombre_zip)
+
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(os.remove, temp_zip.name)
+
+    return FileResponse(
+        path=temp_zip.name,
+        media_type='application/zip',
+        headers={
+            'Content-Disposition': f"attachment; filename*=UTF-8''{nombre_encoded}"
+        },
+        background=background_tasks
+    )
+
 
 @router.put("/{solicitud_id}/certificar")
 async def certificar_solicitud(

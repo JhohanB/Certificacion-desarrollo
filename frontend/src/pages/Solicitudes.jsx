@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Select, Input, Card, Typography, Space, message } from 'antd'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Table, Tag, Button, Select, Input, Card, Typography, Space, message, DatePicker, Skeleton } from 'antd'
+const { RangePicker } = DatePicker
 import { SearchOutlined, EyeOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
@@ -35,14 +36,27 @@ const TEXTOS_ESTADO = {
   CERTIFICADO: 'Certificado',
 }
 
+// Función debounce para optimizar búsqueda
+const debounce = (func, delay) => {
+  let timeoutId
+  return (...args) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+}
+
 export default function Solicitudes() {
   const [solicitudes, setSolicitudes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
+  const [filtroFicha, setFiltroFicha] = useState('')
+  const [filtroFecha, setFiltroFecha] = useState(null) // Cambiado a null para rango [fechaDesde, fechaHasta]
+  const [filtroBusquedaDebounced, setFiltroBusquedaDebounced] = useState('')
   const [orden, setOrden] = useState('desc')
   const [agrupar, setAgrupar] = useState(false)
   const [pagina, setPagina] = useState(1)
+  const [descargandoCertificados, setDescargandoCertificados] = useState(false)
   const navigate = useNavigate()
   const { usuario, rolActivo } = useAuth()
 
@@ -70,34 +84,65 @@ export default function Solicitudes() {
   }
 
   useEffect(() => { cargar() }, [filtroEstado])
-  useEffect(() => { setPagina(1) }, [filtroBusqueda, filtroEstado, orden, agrupar])
+  useEffect(() => { setPagina(1) }, [filtroBusqueda, filtroEstado, orden, agrupar, filtroFicha, filtroFecha])
 
-  const solicitudesFiltradas = solicitudes
-    .filter(s => {
-      if (!filtroBusqueda) return true
-      const busqueda = filtroBusqueda.toLowerCase()
-      return (
-        s.nombre_aprendiz?.toLowerCase().includes(busqueda) ||
-        s.numero_documento?.toLowerCase().includes(busqueda) ||
-        s.numero_ficha?.toLowerCase().includes(busqueda) ||
-        s.nombre_programa?.toLowerCase().includes(busqueda)
-      )
-    })
-    .sort((a, b) => {
-      const diff = new Date(a.fecha_solicitud) - new Date(b.fecha_solicitud)
-      return orden === 'asc' ? diff : -diff
-    })
+  // Debounce para filtro de búsqueda
+  useEffect(() => {
+    const debounced = debounce(() => setFiltroBusquedaDebounced(filtroBusqueda), 300)
+    debounced()
+    return () => clearTimeout(debounced.timeoutId)
+  }, [filtroBusqueda])
 
-  const solicitudesAgrupadas = agrupar
-    ? Object.entries(
-        solicitudesFiltradas.reduce((acc, s) => {
-          const tipo = s.nombre_tipo_programa
-          if (!acc[tipo]) acc[tipo] = []
-          acc[tipo].push(s)
-          return acc
-        }, {})
-      ).map(([tipo, items]) => ({ tipo, items }))
-    : null
+  // Memoizar solicitudes filtradas para evitar recalculos innecesarios
+  const solicitudesFiltradas = useMemo(() => {
+    return solicitudes
+      .filter(s => {
+        // Filtro de búsqueda general (sin ficha ni fecha)
+        if (filtroBusquedaDebounced) {
+          const busqueda = filtroBusquedaDebounced.toLowerCase()
+          const coincide = (
+            s.nombre_aprendiz?.toLowerCase().includes(busqueda) ||
+            s.numero_documento?.toLowerCase().includes(busqueda) ||
+            s.nombre_programa?.toLowerCase().includes(busqueda) ||
+            s.nombre_tipo_programa?.toLowerCase().includes(busqueda)
+          )
+          if (!coincide) return false
+        }
+
+        // Filtro específico de número de ficha
+        if (filtroFicha && !s.numero_ficha?.toLowerCase().includes(filtroFicha.toLowerCase())) {
+          return false
+        }
+
+        // Filtro de rango de fechas
+        if (filtroFecha && filtroFecha.length === 2) {
+          const fechaSolicitud = new Date(s.fecha_solicitud)
+          const fechaDesde = new Date(filtroFecha[0])
+          const fechaHasta = new Date(filtroFecha[1])
+          // Establecer hora final del día para fechaHasta
+          fechaHasta.setHours(23, 59, 59, 999)
+          if (fechaSolicitud < fechaDesde || fechaSolicitud > fechaHasta) return false
+        }
+
+        return true
+      })
+      .sort((a, b) => {
+        const diff = new Date(a.fecha_solicitud) - new Date(b.fecha_solicitud)
+        return orden === 'asc' ? diff : -diff
+      })
+  }, [solicitudes, filtroBusquedaDebounced, filtroFicha, filtroFecha, orden])
+
+  const solicitudesAgrupadas = useMemo(() => {
+    if (!agrupar) return null
+    return Object.entries(
+      solicitudesFiltradas.reduce((acc, s) => {
+        const tipo = s.nombre_tipo_programa
+        if (!acc[tipo]) acc[tipo] = []
+        acc[tipo].push(s)
+        return acc
+      }, {})
+    ).map(([tipo, items]) => ({ tipo, items }))
+  }, [solicitudesFiltradas, agrupar])
 
   const descargarPDF = async (solicitudId) => {
     try {
@@ -121,7 +166,48 @@ export default function Solicitudes() {
     }
   }
 
-  const renderAcciones = (record) => {
+  const certificadosVisibles = useMemo(() => {
+    return agrupar 
+      ? (solicitudesAgrupadas?.flatMap(g => g.items) || []).filter(s => s.estado_actual === 'CERTIFICADO')
+      : solicitudesFiltradas.filter(s => s.estado_actual === 'CERTIFICADO')
+  }, [agrupar, solicitudesAgrupadas, solicitudesFiltradas])
+
+  const descargarCertificadosMasivo = async () => {
+    if (!certificadosVisibles.length) {
+      message.warning('No hay certificados para descargar en los resultados actuales')
+      return
+    }
+
+    setDescargandoCertificados(true)
+    try {
+      const { data, headers } = await api.post('/documentos/certificados/zip', {
+        ids: certificadosVisibles.map(s => s.id)
+      }, {
+        responseType: 'blob'
+      })
+
+      const url = window.URL.createObjectURL(new Blob([data]))
+      const link = document.createElement('a')
+      link.href = url
+      const contentDisposition = headers['content-disposition']
+      let nombreArchivo = `certificados_${new Date().toISOString().slice(0,10)}.zip`
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*=UTF-8''(.+)/)
+        if (match) nombreArchivo = decodeURIComponent(match[1])
+      }
+      link.setAttribute('download', nombreArchivo)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      message.error('Error al descargar los certificados')
+    } finally {
+      setDescargandoCertificados(false)
+    }
+  }
+
+  const renderAcciones = useCallback((record) => {
     // ADMIN y FUNCIONARIO_CERTIFICACION — siempre pueden ver
     if (tieneAccesoCompleto || esAdmin) {
       return (
@@ -174,7 +260,7 @@ export default function Solicitudes() {
     }
 
     return null
-  }
+  }, [tieneAccesoCompleto, esAdmin, puedeDescargar, esCoordinador, esFirmante, navigate])
 
   const columnas = [
     {
@@ -233,40 +319,74 @@ export default function Solicitudes() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 8, flexWrap: 'wrap' }}>
         <Title level={4} style={{ margin: 0 }}>Solicitudes</Title>
-        <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
+          <Button
+            icon={<DownloadOutlined />}
+            type="primary"
+            loading={descargandoCertificados}
+            disabled={!certificadosVisibles.length}
+            onClick={descargarCertificadosMasivo}
+          >
+            Descargar certificados ({certificadosVisibles.length})
+          </Button>
+        </Space>
       </div>
 
       <Card style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Space orientation="vertical" style={{ width: '100%' }}>
-          <Input
-            placeholder="Buscar por aprendiz, documento, ficha o programa..."
-            prefix={<SearchOutlined />}
-            value={filtroBusqueda}
-            onChange={e => setFiltroBusqueda(e.target.value)}
-            allowClear
-          />
-          <Select style={{ width: '100%' }} value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS} />
-          <Select
-            style={{ width: '100%' }} value={orden} onChange={setOrden}
-            options={[
-              { value: 'desc', label: 'Más recientes primero' },
-              { value: 'asc', label: 'Más antiguas primero' },
-            ]}
-          />
-          <Button
-            type={agrupar ? 'primary' : 'default'}
-            onClick={() => setAgrupar(!agrupar)}
-            style={agrupar ? { background: '#004A2F', borderColor: '#004A2F' } : {}}
-          >
-            {agrupar ? 'Agrupado por Nivel de Formación' : 'Agrupar por Nivel de Formación'}
-          </Button>
-        </Space>
+        <form autoComplete="off">
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            <Input
+              placeholder="Buscar por aprendiz, documento, programa o nivel de formación..."
+              prefix={<SearchOutlined />}
+              value={filtroBusqueda}
+              onChange={e => setFiltroBusqueda(e.target.value)}
+              allowClear
+              autoComplete="nope"
+            />
+            <Input
+              placeholder="Filtrar por número de ficha..."
+              value={filtroFicha}
+              onChange={e => setFiltroFicha(e.target.value)}
+              allowClear
+              autoComplete="nope"
+            />
+            <RangePicker
+              style={{ width: '100%' }}
+              placeholder={['Fecha desde', 'Fecha hasta']}
+              value={filtroFecha}
+              onChange={(dates) => setFiltroFecha(dates)}
+              format="DD/MM/YYYY"
+            />
+            <Select style={{ width: '100%' }} value={filtroEstado} onChange={setFiltroEstado} options={ESTADOS} />
+            <Select
+              style={{ width: '100%' }} value={orden} onChange={setOrden}
+              options={[
+                { value: 'desc', label: 'Más recientes primero' },
+                { value: 'asc', label: 'Más antiguas primero' },
+              ]}
+            />
+            <Button
+              type={agrupar ? 'primary' : 'default'}
+              onClick={() => setAgrupar(!agrupar)}
+              style={agrupar ? { background: '#004A2F', borderColor: '#004A2F' } : {}}
+            >
+              {agrupar ? 'Agrupado por Nivel de Formación' : 'Agrupar por Nivel de Formación'}
+            </Button>
+          </Space>
+        </form>
       </Card>
 
       <Card style={{ borderRadius: 12 }}>
-        {agrupar ? (
+        {cargando ? (
+          <div style={{ padding: 24 }}>
+            <Skeleton active paragraph={{ rows: 4 }} />
+            <Skeleton active paragraph={{ rows: 4 }} style={{ marginTop: 16 }} />
+            <Skeleton active paragraph={{ rows: 4 }} style={{ marginTop: 16 }} />
+          </div>
+        ) : agrupar ? (
           solicitudesAgrupadas?.map(({ tipo, items }) => (
             <div key={tipo} style={{ marginBottom: 24 }}>
               <div style={{
@@ -285,7 +405,7 @@ export default function Solicitudes() {
             dataSource={solicitudesFiltradas}
             columns={columnas}
             rowKey="id"
-            loading={cargando}
+            loading={false}
             scroll={{ x: 800 }}
             pagination={{
               current: pagina,

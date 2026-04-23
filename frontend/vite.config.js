@@ -13,4 +13,21 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separar librerías pesadas
+          'pdf-libs': ['jspdf', 'jspdf-autotable', 'pdfjs-dist', 'html2canvas'],
+          'excel-libs': ['xlsx'],
+          'charts-libs': ['recharts'],
+          'file-saver': ['file-saver'],
+          // Separar Ant Design en chunks más pequeños
+          'antd-core': ['antd'],
+          'antd-icons': ['@ant-design/icons'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000, // Aumentar límite de warning
+  },
 })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Table, Button, Card, Typography, Tag, Space, Modal,
   Form, Input, Select, Switch, Popconfirm, message, Alert
@@ -28,7 +28,7 @@ export default function Usuarios() {
   const [formCrear] = Form.useForm()
   const [formEditar] = Form.useForm()
 
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     setCargando(true)
     try {
       const [resUsuarios, resRoles] = await Promise.all([
@@ -42,12 +42,12 @@ export default function Usuarios() {
     } finally {
       setCargando(false)
     }
-  }
+  }, [])
 
   useEffect(() => { cargar() }, [])
   useEffect(() => { setPagina(1) }, [busqueda])
 
-  const usuariosFiltrados = usuarios.filter(u => {
+  const usuariosFiltrados = useMemo(() => usuarios.filter(u => {
     if (!busqueda) return true
     const b = busqueda.toLowerCase()
     return (
@@ -55,9 +55,9 @@ export default function Usuarios() {
       u.correo?.toLowerCase().includes(b) ||
       u.documento?.toLowerCase().includes(b)
     )
-  })
+  }), [usuarios, busqueda])
 
-  const crearUsuario = async (values) => {
+  const crearUsuario = useCallback(async (values) => {
     setEnviando(true)
     try {
       await api.post('/usuarios/', {
@@ -77,9 +77,9 @@ export default function Usuarios() {
     } finally {
       setEnviando(false)
     }
-  }
+  }, [cargar, formCrear])
 
-  const editarUsuario = async (values) => {
+  const editarUsuario = useCallback(async (values) => {
     setEnviando(true)
     try {
       await api.put(`/usuarios/${usuarioSeleccionado.id}`, {
@@ -97,9 +97,9 @@ export default function Usuarios() {
     } finally {
       setEnviando(false)
     }
-  }
+  }, [usuarioSeleccionado, cargar])
 
-  const toggleEstado = async (usuario) => {
+  const toggleEstado = useCallback(async (usuario) => {
     try {
       await api.put(`/usuarios/${usuario.id}/estado?activo=${!usuario.activo}`)
       message.success(`Usuario ${!usuario.activo ? 'activado' : 'desactivado'}`)
@@ -108,9 +108,9 @@ export default function Usuarios() {
       const msg = err.response?.data?.detail
       message.error(typeof msg === 'string' ? msg : 'Error al cambiar estado')
     }
-  }
+  }, [cargar])
 
-  const restablecerPassword = async (usuario) => {
+  const restablecerPassword = useCallback(async (usuario) => {
     try {
       await api.post(`/usuarios/${usuario.id}/restablecer-password`)
       message.success('Contraseña restablecida. Se envió al correo del usuario.')
@@ -118,9 +118,9 @@ export default function Usuarios() {
       const msg = err.response?.data?.detail
       message.error(typeof msg === 'string' ? msg : 'Error al restablecer')
     }
-  }
+  }, [])
 
-  const abrirEditar = (usuario) => {
+  const abrirEditar = useCallback((usuario) => {
     setUsuarioSeleccionado(usuario)
     formEditar.setFieldsValue({
       documento: usuario.documento,
@@ -129,14 +129,14 @@ export default function Usuarios() {
       telefono: usuario.telefono,
     })
     setModalEditar(true)
-  }
+  }, [formEditar])
 
-  const abrirRoles = (usuario) => {
+  const abrirRoles = useCallback((usuario) => {
     setUsuarioSeleccionado(usuario)
     setModalRoles(true)
-  }
+  }, [])
 
-  const agregarRol = async (rolId) => {
+  const agregarRol = useCallback(async (rolId) => {
     try {
       await api.post(`/usuarios/${usuarioSeleccionado.id}/roles`, { rol_id: rolId })
       message.success('Rol asignado')
@@ -148,9 +148,9 @@ export default function Usuarios() {
       const msg = err.response?.data?.detail
       message.error(typeof msg === 'string' ? msg : 'Error al asignar rol')
     }
-  }
+  }, [usuarioSeleccionado, cargar])
 
-  const quitarRol = async (rolId) => {
+  const quitarRol = useCallback(async (rolId) => {
     try {
       await api.delete(`/usuarios/${usuarioSeleccionado.id}/roles/${rolId}`)
       message.success('Rol removido')
@@ -161,12 +161,12 @@ export default function Usuarios() {
       const msg = err.response?.data?.detail
       message.error(typeof msg === 'string' ? msg : 'Error al quitar rol')
     }
-  }
+  }, [usuarioSeleccionado, cargar])
 
-  const rolesAsignados = usuarioSeleccionado?.roles?.map(r => r.id) ?? []
-  const rolesDisponibles = roles.filter(r => !rolesAsignados.includes(r.id))
+  const rolesAsignados = useMemo(() => usuarioSeleccionado?.roles?.map(r => r.id) ?? [], [usuarioSeleccionado])
+  const rolesDisponibles = useMemo(() => roles.filter(r => !rolesAsignados.includes(r.id)), [roles, rolesAsignados])
 
-  const columnas = [
+  const columnas = useMemo(() => [
     {
       title: 'Usuario',
       key: 'usuario',
@@ -250,7 +250,7 @@ export default function Usuarios() {
         </Space>
       )
     }
-  ]
+  ], [abrirEditar, abrirRoles, toggleEstado, restablecerPassword])
 
   return (
     <div>
