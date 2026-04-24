@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Steps, Form, Input, Select, Button, Typography, Card, Alert, Result, Tag } from 'antd'
+import { Steps, Form, Input, Select, Button, Typography, Card, Alert, Result, Tag, notification  } from 'antd'
 import {
   ArrowLeftOutlined, ArrowRightOutlined, SendOutlined,
   FilePdfOutlined, CheckCircleFilled, DeleteOutlined
@@ -82,13 +82,32 @@ export default function NuevaSolicitud() {
     if (!file) return
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError(`El archivo debe ser un PDF`)
+      const mensaje = "El archivo debe ser un PDF";
+      setError(mensaje);
+
+      notification.warning({
+        message: 'Documento no válido',
+        description: mensaje,
+        placement: 'topRight',
+        duration: 5,
+      });
+
       e.target.value = ''
       return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError(`El archivo supera el tamaño máximo de 10MB`)
+      const mensaje = "El archivo supera el tamaño máximo de 10MB";
+
+      setError(mensaje);
+
+      notification.warning({
+        message: "Archivo demasiado grande",
+        description: mensaje,
+        placement: "topRight",
+        duration: 5,
+      });
+
       e.target.value = ''
       return
     }
@@ -140,8 +159,18 @@ export default function NuevaSolicitud() {
 
       setExitoso(true)
     } catch (err) {
-      const mensaje = err.response?.data?.detail
-      setError(typeof mensaje === 'string' ? mensaje : 'Error al enviar la solicitud')
+      const mensaje = err.response?.data?.detail || "Occurrió un error al enviar la solicitud";
+      setError(typeof mensaje === 'string' ? mensaje : 'Error al enviar la solicitud');
+      notification.error({
+        message: "Error en la solicitud",
+        description: typeof mensaje === 'string' ? mensaje : "Error al enviar la solicitud",
+        placement: "topRight",
+        duration: 5,
+      });
+      windowScrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
     } finally {
       setCargando(false)
     }
@@ -376,7 +405,7 @@ export default function NuevaSolicitud() {
             <Button
               type="primary"
               icon={<ArrowRightOutlined />}
-              iconPosition="end"
+              iconPlacement="end"
               onClick={siguiente}
               size="large"
               style={{ background: '#004A2F', borderColor: '#004A2F' }}

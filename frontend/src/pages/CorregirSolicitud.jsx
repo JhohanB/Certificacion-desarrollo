@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Steps, Form, Input, Select, Button, Typography, Card, Alert, Result, Tag } from 'antd'
+import { Steps, Form, Input, Select, Button, Typography, Card, Alert, Result, Tag, notification } from 'antd'
 import {
   ArrowLeftOutlined, ArrowRightOutlined, SendOutlined,
   FilePdfOutlined, CheckCircleFilled, DeleteOutlined
@@ -99,12 +99,26 @@ export default function CorregirSolicitud() {
     const file = e.target.files[0]
     if (!file) return
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('El archivo debe ser un PDF')
+      const mensaje = "El archivo debe ser un PDF";
+      setError(mensaje);
+      notification.warning({
+        message: 'Archivo no válido',
+        description: mensaje,
+        placement: 'topRight',
+        duration: 5,
+      });
       e.target.value = ''
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      setError('El archivo supera el tamaño máximo de 10MB')
+      const mensaje = "El archivo supera el tamaño máximo de 10MB";
+      setError(mensaje);
+      notification.warning({
+        message: "Archivo demasiado grande",
+        description: mensaje,
+        placement: "topRight",
+        duration: 5,
+      });
       e.target.value = ''
       return
     }
@@ -149,8 +163,19 @@ export default function CorregirSolicitud() {
 
       setExitoso(true)
     } catch (err) {
-      const mensaje = err.response?.data?.detail
-      setError(typeof mensaje === 'string' ? mensaje : 'Error al enviar las correcciones')
+      const mensaje = err.response?.data?.detail || "Ocurrió un error al enviar las correcciones.";
+      const textoError = typeof mensaje === 'string' ? mensaje : 'Error al enviar las correcciones';
+      setError(textoError);
+      notification.error({
+        message: 'Error',
+        description: textoError,
+        placement: 'topRight',
+        duration: 5,
+      });
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     } finally {
       setEnviando(false)
     }
@@ -408,7 +433,7 @@ export default function CorregirSolicitud() {
             <Button
               type="primary"
               icon={<ArrowRightOutlined />}
-              iconPosition="end"
+              iconPlacement="end"
               onClick={siguiente}
               size="large"
               style={{ background: '#004A2F', borderColor: '#004A2F' }}

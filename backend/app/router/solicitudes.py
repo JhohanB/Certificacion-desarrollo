@@ -16,6 +16,7 @@ from app.schemas.solicitudes import (
 from app.crud import solicitudes as crud_solicitudes
 from app.router.dependencies import check_permission
 from app.utils.email_service import enviar_confirmacion_solicitud
+from app.utils.file_validation import validar_archivo_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -96,22 +97,12 @@ async def crear_solicitud(
 
         contenido = await archivo.read()
 
-        if not archivo.filename.lower().endswith(".pdf"):
+        # Validar archivo usando validación segura mejorada
+        es_valido, mensaje_error = validar_archivo_pdf(contenido, archivo.filename)
+        if not es_valido:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El archivo '{doc['nombre']}' debe ser un PDF"
-            )
-
-        if len(contenido) > max_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El archivo '{doc['nombre']}' supera el tamaño máximo de {settings.MAX_FILE_SIZE_MB}MB"
-            )
-
-        if not contenido.startswith(b"%PDF"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El archivo '{doc['nombre']}' no es un PDF válido"
+                detail=f"El archivo '{doc['nombre']}' no es válido: {mensaje_error}"
             )
 
         archivos_validados[doc['id']] = (contenido, doc)
@@ -138,9 +129,7 @@ async def crear_solicitud(
         ruta = f"{carpeta}/{nombre_archivo}"
         with open(ruta, "wb") as f:
             f.write(contenido)
-        # Guardar la URL relativa con barra inicial para que sea /uploads/...
-        archivo_url = f"/{ruta}"
-        crud_solicitudes.create_documento_solicitud(db, solicitud_id, documento_id, archivo_url)
+        crud_solicitudes.create_documento_solicitud(db, solicitud_id, documento_id, ruta)
 
     tipo_nombre = next(
         (d["nombre"] for d in crud_solicitudes.get_tipo_programas(db) if d["id"] == tipo_programa_id), ""
@@ -531,12 +520,13 @@ async def corregir_datos_aprendiz(
         if not archivo:
             continue
         contenido = await archivo.read()
-        if not archivo.filename.lower().endswith(".pdf"):
-            raise HTTPException(status_code=400, detail=f"El archivo debe ser PDF")
-        if len(contenido) > max_bytes:
-            raise HTTPException(status_code=400, detail=f"Archivo supera el tamaño máximo")
-        if not contenido.startswith(b"%PDF"):
-            raise HTTPException(status_code=400, detail=f"Archivo no es un PDF válido")
+        # Validar archivo usando validación segura mejorada
+        es_valido, mensaje_error = validar_archivo_pdf(contenido, archivo.filename)
+        if not es_valido:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El archivo no es válido: {mensaje_error}"
+            )
 
         version = doc.get("version", 1) + 1
         nombre_archivo = f"doc_{doc['documento_id']}_v{version}.pdf"
