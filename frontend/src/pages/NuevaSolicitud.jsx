@@ -209,34 +209,121 @@ export default function NuevaSolicitud() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
-      padding: '40px 24px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center'
-    }}>
-      <div style={{ width: '100%', maxWidth: 700, marginBottom: 24 }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
+        padding: '40px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      {/* Botón volver */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 850,
+          marginBottom: 24
+        }}
+      >
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate('/')}
-          style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: 'white' }}
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            borderColor: 'rgba(255,255,255,0.4)',
+            color: 'white',
+            borderRadius: 10,
+            height: 42,
+            paddingInline: 20
+          }}
         >
           Volver al inicio
         </Button>
       </div>
 
-      <Card style={{ width: '100%', maxWidth: 700, borderRadius: 16 }}>
-        <Title level={4} style={{ textAlign: 'center', color: '#004A2F', marginBottom: 32 }}>
-          Nueva Solicitud de Certificación
-        </Title>
+      {/* Card principal */}
+      <Card
+        style={{
+          width: '100%',
+          maxWidth: 850,
+          borderRadius: 24,
+          border: 'none',
+          boxShadow: '0 15px 40px rgba(0,0,0,0.08)',
+          overflow: 'hidden'
+        }}
+        bodyStyle={{
+          padding: 40
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: 36
+          }}
+        >
+          <Title
+            level={3}
+            style={{
+              color: '#004A2F',
+              marginBottom: 8,
+              fontWeight: 700
+            }}
+          >
+            Nueva Solicitud de Certificación
+          </Title>
 
-        <Steps current={pasoActual} style={{ marginBottom: 40 }}>
-          <Steps.Step title="Datos personales" />
-          <Steps.Step title="Datos del programa" />
-          <Steps.Step title="Documentos" />
-        </Steps>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 15
+            }}
+          >
+            Completa la información requerida para iniciar tu proceso de certificación
+          </Text>
+        </div>
 
-        {error && <Alert title={error} type="error" showIcon style={{ marginBottom: 24 }} />}
+        {/* Steps */}
+        <div
+          style={{
+            background: '#fafafa',
+            padding: 24,
+            borderRadius: 16,
+            marginBottom: 32
+          }}
+        >
+          <Steps
+            current={pasoActual}
+            items={[
+              {
+                title: 'Datos personales',
+                description: 'Información del aprendiz'
+              },
+              {
+                title: 'Datos del programa',
+                description: 'Programa de formación'
+              },
+              {
+                title: 'Documentos',
+                description: 'Carga de PDF'
+              }
+            ]}
+          />
+        </div>
+
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            style={{
+              marginBottom: 24,
+              borderRadius: 12
+            }}
+          />
+        )}
 
         {/* Paso 1 */}
         {pasoActual === 0 && (
@@ -392,11 +479,24 @@ export default function NuevaSolicitud() {
         )}
 
         {/* Botones */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 40,
+            paddingTop: 24,
+            borderTop: '1px solid #f0f0f0'
+          }}
+        >
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={pasoActual === 0 ? () => navigate('/') : anterior}
             size="large"
+            style={{
+              height: 48,
+              borderRadius: 12,
+              paddingInline: 24
+            }}
           >
             {pasoActual === 0 ? 'Cancelar' : 'Anterior'}
           </Button>
@@ -405,10 +505,16 @@ export default function NuevaSolicitud() {
             <Button
               type="primary"
               icon={<ArrowRightOutlined />}
-              iconPlacement="end"
               onClick={siguiente}
               size="large"
-              style={{ background: '#004A2F', borderColor: '#004A2F' }}
+              style={{
+                background: '#004A2F',
+                borderColor: '#004A2F',
+                height: 48,
+                borderRadius: 12,
+                paddingInline: 32,
+                fontWeight: 600
+              }}
             >
               Siguiente
             </Button>
@@ -419,7 +525,14 @@ export default function NuevaSolicitud() {
               onClick={enviar}
               loading={cargando}
               size="large"
-              style={{ background: '#004A2F', borderColor: '#004A2F' }}
+              style={{
+                background: '#004A2F',
+                borderColor: '#004A2F',
+                height: 48,
+                borderRadius: 12,
+                paddingInline: 32,
+                fontWeight: 600
+              }}
             >
               Enviar solicitud
             </Button>

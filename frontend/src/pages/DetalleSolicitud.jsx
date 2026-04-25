@@ -126,8 +126,14 @@ export default function DetalleSolicitud() {
   const [historialObs, setHistorialObs] = useState(null)
   const [historialEstados, setHistorialEstados] = useState([])
 
-  const hayDocumentosObservados = solicitud?.documentos?.some(d => d.estado_documento === 'OBSERVADO')
-  const tieneObservacionesParaReenviar = hayDocumentosObservados || !!solicitud?.observaciones_generales
+  const hayDocumentosObservados = useMemo(
+    () => solicitud?.documentos?.some(d => d.estado_documento === 'OBSERVADO'),
+    [solicitud?.documentos]
+  )
+  const tieneObservacionesParaReenviar = useMemo(
+    () => hayDocumentosObservados || !!solicitud?.observaciones_generales,
+    [hayDocumentosObservados, solicitud?.observaciones_generales]
+  )
 
   // Roles
   const rolesObjetos = rolActivo ? [rolActivo] : (usuario?.roles ?? [])

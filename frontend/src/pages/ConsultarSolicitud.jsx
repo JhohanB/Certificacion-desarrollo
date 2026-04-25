@@ -68,134 +68,355 @@ export default function ConsultarSolicitud() {
     : 0
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
-      padding: '40px 24px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center'
-    }}>
-      <div style={{ width: '100%', maxWidth: 700, marginBottom: 24 }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
+        padding: '40px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      {/* Botón volver */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 850,
+          marginBottom: 24
+        }}
+      >
         <Button
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate('/')}
-          style={{ background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.4)', color: 'white' }}
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            borderColor: 'rgba(255,255,255,0.4)',
+            color: 'white',
+            borderRadius: 10,
+            height: 42,
+            paddingInline: 20
+          }}
         >
           Volver al inicio
         </Button>
       </div>
 
-      {/* Formulario */}
-      <Card style={{ width: '100%', maxWidth: 700, borderRadius: 16, marginBottom: 24 }}>
-        <Title level={4} style={{ textAlign: 'center', color: '#004A2F', marginBottom: 24 }}>
-          Consultar Estado de Solicitud
-        </Title>
+      {/* Formulario principal */}
+      <Card
+        style={{
+          width: '100%',
+          maxWidth: 850,
+          borderRadius: 24,
+          border: 'none',
+          boxShadow: '0 15px 40px rgba(0,0,0,0.08)',
+          marginBottom: 24
+        }}
+        styles={{
+          body: {
+            padding: 40
+          }
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: 32
+          }}
+        >
+          <Title
+            level={3}
+            style={{
+              color: '#004A2F',
+              marginBottom: 8,
+              fontWeight: 700
+            }}
+          >
+            Consultar Estado de Solicitud
+          </Title>
 
-        <Form form={form} layout="vertical" onFinish={consultar}>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 15
+            }}
+          >
+            Consulta el avance de tu proceso de certificación
+          </Text>
+        </div>
+
+        {/* Formulario */}
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={consultar}
+        >
           <Form.Item label="Número de documento">
             <Space.Compact style={{ width: '100%' }}>
-              <Form.Item name="tipo_documento" noStyle
-                rules={[{ required: true, message: 'Selecciona el tipo' }]}>
+              <Form.Item
+                name="tipo_documento"
+                noStyle
+                rules={[
+                  {
+                    required: true,
+                    message: 'Selecciona el tipo'
+                  }
+                ]}
+              >
                 <Select
                   placeholder="Tipo"
                   size="large"
-                  style={{ width: 110 }}
+                  style={{ width: 130 }}
                   options={[
                     { value: 'CC', label: 'CC' },
                     { value: 'CE', label: 'CE' },
                     { value: 'TI', label: 'TI' },
                     { value: 'PA', label: 'PA' },
                     { value: 'PEP', label: 'PEP' },
-                    { value: 'PPT', label: 'PPT' },
+                    { value: 'PPT', label: 'PPT' }
                   ]}
                 />
               </Form.Item>
-              <Form.Item name="numero_documento" noStyle
-                rules={[{ required: true, message: 'Ingresa tu número de documento' }]}>
-                <Input placeholder="Número de documento" size="large" />
+
+              <Form.Item
+                name="numero_documento"
+                noStyle
+                rules={[
+                  {
+                    required: true,
+                    message: 'Ingresa tu número de documento'
+                  }
+                ]}
+              >
+                <Input
+                  placeholder="Número de documento"
+                  size="large"
+                />
               </Form.Item>
             </Space.Compact>
           </Form.Item>
 
-          <Form.Item name="numero_ficha" label="Número de ficha"
-            rules={[{ required: true, message: 'Ingresa tu número de ficha' }]}>
-            <Input placeholder="Ej: 2345678" size="large" />
+          <Form.Item
+            name="numero_ficha"
+            label="Número de ficha"
+            rules={[
+              {
+                required: true,
+                message: 'Ingresa tu número de ficha'
+              }
+            ]}
+          >
+            <Input
+              placeholder="Ej: 2345678"
+              size="large"
+            />
           </Form.Item>
 
           <Button
-            type="primary" htmlType="submit" size="large" block
-            loading={cargando} icon={<SearchOutlined />}
-            style={{ background: '#004A2F', borderColor: '#004A2F' }}
+            type="primary"
+            htmlType="submit"
+            size="large"
+            block
+            loading={cargando}
+            icon={<SearchOutlined />}
+            style={{
+              background: '#004A2F',
+              borderColor: '#004A2F',
+              height: 50,
+              borderRadius: 12,
+              fontWeight: 600,
+              fontSize: 15
+            }}
           >
-            Consultar
+            Consultar solicitud
           </Button>
         </Form>
 
-        {error && <Alert title={error} type="error" showIcon style={{ marginTop: 16 }} />}
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            style={{
+              marginTop: 20,
+              borderRadius: 12
+            }}
+          />
+        )}
       </Card>
 
       {/* Resultado */}
       {solicitud && (
-        <Card style={{ width: '100%', maxWidth: 700, borderRadius: 16 }}>
-
+        <Card
+          style={{
+            width: '100%',
+            maxWidth: 850,
+            borderRadius: 24,
+            border: 'none',
+            boxShadow: '0 15px 40px rgba(0,0,0,0.08)'
+          }}
+          styles={{
+            body: {
+              padding: 40
+            }
+          }}
+        >
           {/* Datos básicos */}
-          <div style={{ marginBottom: 24 }}>
-            <Title level={5} style={{ color: '#004A2F', marginBottom: 12 }}>
+          <div style={{ marginBottom: 28 }}>
+            <Title
+              level={4}
+              style={{
+                color: '#004A2F',
+                marginBottom: 20
+              }}
+            >
               <FileTextOutlined style={{ marginRight: 8 }} />
               Datos de la solicitud
             </Title>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div><Text type="secondary">Aprendiz:</Text> <Text strong>{solicitud.nombre_aprendiz}</Text></div>
-              <div><Text type="secondary">Documento:</Text> <Text strong>{solicitud.numero_documento}</Text></div>
-              <div><Text type="secondary">Programa:</Text> <Text strong>{solicitud.nombre_programa}</Text></div>
-              <div><Text type="secondary">Ficha:</Text> <Text strong>{solicitud.numero_ficha}</Text></div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 14
+              }}
+            >
+              <div>
+                <Text type="secondary">Aprendiz</Text>
+                <br />
+                <Text strong>{solicitud.nombre_aprendiz}</Text>
+              </div>
+
+              <div>
+                <Text type="secondary">Documento</Text>
+                <br />
+                <Text strong>{solicitud.numero_documento}</Text>
+              </div>
+
+              <div>
+                <Text type="secondary">Programa</Text>
+                <br />
+                <Text strong>{solicitud.nombre_programa}</Text>
+              </div>
+
+              <div>
+                <Text type="secondary">Ficha</Text>
+                <br />
+                <Text strong>{solicitud.numero_ficha}</Text>
+              </div>
             </div>
           </div>
 
           <Divider />
 
           {/* Progreso */}
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Steps
-              orientation="vertical"
-              size="small"
-              current={indiceActual}
-              style={{ maxWidth: 400 }}
-              items={PASOS.map((paso, i) => {
-                // Pasos condicionales — solo mostrar si aplican
-                if (paso.estado === 'CON_OBSERVACIONES' &&
-                  !['CON_OBSERVACIONES', 'CORREGIDO', 'PENDIENTE_FIRMAS',
-                    'PENDIENTE_CERTIFICACION', 'CERTIFICADO'].includes(solicitud.estado_actual)) {
-                  return null
-                }
-                if (paso.estado === 'CORREGIDO' &&
-                  !['CORREGIDO', 'PENDIENTE_FIRMAS', 'PENDIENTE_CERTIFICACION',
-                    'CERTIFICADO'].includes(solicitud.estado_actual)) {
-                  return null
-                }
+          <div style={{ marginBottom: 28 }}>
+            <Title
+              level={4}
+              style={{
+                color: '#004A2F',
+                marginBottom: 20
+              }}
+            >
+              Estado del proceso
+            </Title>
 
-                return {
-                  title: paso.titulo,
-                  description: i === indiceActual ? paso.descripcion : '',
-                  status: i < indiceActual
-                    ? 'finish'
-                    : i === indiceActual
-                      ? (solicitud.estado_actual === 'CON_OBSERVACIONES' ? 'error' : 'process')
-                      : 'wait'
-                }
-              }).filter(Boolean)}
-            />
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            >
+              <Steps
+                orientation="vertical"
+                current={indiceActual}
+                style={{
+                  width: '100%',
+                  maxWidth: 500
+                }}
+                items={PASOS.map((paso, i) => {
+                  if (
+                    paso.estado === 'CON_OBSERVACIONES' &&
+                    ![
+                      'CON_OBSERVACIONES',
+                      'CORREGIDO',
+                      'PENDIENTE_FIRMAS',
+                      'PENDIENTE_CERTIFICACION',
+                      'CERTIFICADO'
+                    ].includes(solicitud.estado_actual)
+                  ) {
+                    return null
+                  }
+
+                  if (
+                    paso.estado === 'CORREGIDO' &&
+                    ![
+                      'CORREGIDO',
+                      'PENDIENTE_FIRMAS',
+                      'PENDIENTE_CERTIFICACION',
+                      'CERTIFICADO'
+                    ].includes(solicitud.estado_actual)
+                  ) {
+                    return null
+                  }
+
+                  return {
+                    title: paso.titulo,
+                    content:
+                      i === indiceActual
+                        ? paso.descripcion
+                        : '',
+                    status:
+                      i < indiceActual
+                        ? 'finish'
+                        : i === indiceActual
+                        ? solicitud.estado_actual === 'CON_OBSERVACIONES'
+                          ? 'error'
+                          : 'process'
+                        : 'wait'
+                  }
+                }).filter(Boolean)}
+              />
+            </div>
           </div>
 
           {/* Certificado */}
           {solicitud.estado_actual === 'CERTIFICADO' && (
             <>
               <Divider />
-              <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 12, display: 'block' }} />
-                <Title level={5} style={{ color: '#52c41a' }}>¡Proceso completado!</Title>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '24px 0'
+                }}
+              >
+                <CheckCircleOutlined
+                  style={{
+                    fontSize: 54,
+                    color: '#52c41a',
+                    display: 'block',
+                    marginBottom: 16
+                  }}
+                />
+
+                <Title
+                  level={4}
+                  style={{
+                    color: '#52c41a'
+                  }}
+                >
+                  ¡Proceso completado!
+                </Title>
+
                 <Text type="secondary">
-                  Para descargar tu certificado ingresa a {' '}
-                  <a href="https://certificados.sena.edu.co" target="_blank" rel="noreferrer">
+                  Para descargar tu certificado ingresa a{' '}
+                  <a
+                    href="https://certificados.sena.edu.co"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     certificados.sena.edu.co
                   </a>
                 </Text>
@@ -203,33 +424,48 @@ export default function ConsultarSolicitud() {
             </>
           )}
 
-          {/* Observaciones — solo si no está certificado */}
-          {solicitud.observaciones_generales && solicitud.estado_actual !== 'CERTIFICADO' && (
-            <>
-              <Divider />
-              <Alert
-                title="Observaciones del funcionario"
-                description={solicitud.observaciones_generales}
-                type="warning"
-                showIcon
-              />
-            </>
-          )}
+          {/* Observaciones */}
+          {solicitud.observaciones_generales &&
+            solicitud.estado_actual !== 'CERTIFICADO' && (
+              <>
+                <Divider />
 
-          {/* Documentos — solo si no está certificado */}
+                <Alert
+                  message="Observaciones del funcionario"
+                  description={solicitud.observaciones_generales}
+                  type="warning"
+                  showIcon
+                  style={{
+                    borderRadius: 12
+                  }}
+                />
+              </>
+            )}
+
+          {/* Tabla documentos */}
           {solicitud.estado_actual !== 'CERTIFICADO' && (
             <>
               <Divider />
-              <Title level={5} style={{ color: '#004A2F', marginBottom: 12 }}>
+
+              <Title
+                level={4}
+                style={{
+                  color: '#004A2F',
+                  marginBottom: 16
+                }}
+              >
                 Mis documentos
               </Title>
+
               <Table
-                dataSource={solicitud.documentos?.filter(d => d.es_version_activa)}
+                dataSource={solicitud.documentos?.filter(
+                  d => d.es_version_activa
+                )}
                 columns={columnasDocumentos}
                 rowKey="id"
-                size="small"
                 pagination={false}
-                scroll={{ x: 400 }}
+                size="middle"
+                scroll={{ x: 500 }}
               />
             </>
           )}

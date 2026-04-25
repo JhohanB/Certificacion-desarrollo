@@ -240,191 +240,459 @@ export default function CorregirSolicitud() {
   const documentosAprobados = documentos.filter(d => d.estado_documento === 'APROBADO')
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
-      padding: '40px 24px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center'
-    }}>
-      <Card style={{ width: '100%', maxWidth: 700, borderRadius: 16 }}>
-        <Title level={4} style={{ textAlign: 'center', color: '#004A2F', marginBottom: 8 }}>
-          Corregir Solicitud
-        </Title>
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 32 }}>
-          Revisa y corrige los datos de tu solicitud
-        </Text>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #004A2F 0%, #007A4D 100%)',
+        padding: '40px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      {/* Card principal */}
+      <Card
+        style={{
+          width: '100%',
+          maxWidth: 850,
+          borderRadius: 24,
+          border: 'none',
+          boxShadow: '0 15px 40px rgba(0,0,0,0.08)',
+          overflow: 'hidden'
+        }}
+        bodyStyle={{
+          padding: 40
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: 36
+          }}
+        >
+          <Title
+            level={3}
+            style={{
+              color: '#004A2F',
+              marginBottom: 8,
+              fontWeight: 700
+            }}
+          >
+            Corregir Solicitud
+          </Title>
 
-        <Steps current={pasoActual} style={{ marginBottom: 40 }}>
-          <Steps.Step title="Datos personales" />
-          <Steps.Step title="Datos del programa" />
-          <Steps.Step title="Documentos" />
-        </Steps>
+          <Text
+            type="secondary"
+            style={{
+              fontSize: 15
+            }}
+          >
+            Revisa y corrige la información solicitada para continuar con tu proceso
+          </Text>
+        </div>
 
-        {error && <Alert title={error} type="error" showIcon style={{ marginBottom: 24 }} />}
+        {/* Steps mejorados */}
+        <div
+          style={{
+            background: '#fafafa',
+            padding: 24,
+            borderRadius: 16,
+            marginBottom: 32
+          }}
+        >
+          <Steps
+            current={pasoActual}
+            items={[
+              {
+                title: 'Datos personales',
+                description: 'Información del aprendiz'
+              },
+              {
+                title: 'Datos del programa',
+                description: 'Programa de formación'
+              },
+              {
+                title: 'Documentos',
+                description: 'Corrección de archivos'
+              }
+            ]}
+          />
+        </div>
 
-        {/* Paso 1 — Datos personales */}
-        {pasoActual === 0 && (
-          <Form form={form1} layout="vertical">
-            <Form.Item name="tipo_documento" label="Tipo de documento"
-              rules={[{ required: true, message: 'Selecciona el tipo de documento' }]}>
-              <Select placeholder="Selecciona..." size="large" options={TIPOS_DOCUMENTO} />
-            </Form.Item>
-            <Form.Item name="numero_documento" label="Número de documento"
-              rules={[{ required: true, message: 'Ingresa tu número de documento' }]}>
-              <Input size="large" />
-            </Form.Item>
-            <Form.Item name="nombre_aprendiz" label="Nombre completo"
-              rules={[{ required: true, message: 'Ingresa tu nombre completo' }]}>
-              <Input size="large" />
-            </Form.Item>
-            <Form.Item name="telefono_aprendiz" label="Teléfono (opcional)">
-              <Input size="large" />
-            </Form.Item>
-            <Form.Item name="correo_aprendiz" label="Correo electrónico"
-              rules={[
-                { required: true, message: 'Ingresa tu correo' },
-                { type: 'email', message: 'Correo inválido' }
-              ]}>
-              <Input size="large" />
-            </Form.Item>
-          </Form>
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            style={{
+              marginBottom: 24,
+              borderRadius: 12
+            }}
+          />
         )}
 
-        {/* Paso 2 — Datos del programa */}
-        {pasoActual === 1 && (
-          <Form form={form2} layout="vertical">
-            <Form.Item name="tipo_programa_id" label="Nivel de formación"
-              rules={[{ required: true, message: 'Selecciona el nivel de formación' }]}>
+        {/* ========================= */}
+        {/* PASO 1 — DATOS PERSONALES */}
+        {/* ========================= */}
+        {pasoActual === 0 && (
+          <Form form={form1} layout="vertical">
+            <Form.Item
+              name="tipo_documento"
+              label="Tipo de documento"
+              rules={[
+                {
+                  required: true,
+                  message: 'Selecciona el tipo de documento'
+                }
+              ]}
+            >
               <Select
                 placeholder="Selecciona..."
                 size="large"
-                options={tiposPrograma.map(t => ({ value: t.id, label: t.nombre }))}
+                options={TIPOS_DOCUMENTO}
               />
             </Form.Item>
-            <Form.Item name="nombre_programa" label="Nombre del programa"
-              rules={[{ required: true, message: 'Ingresa el nombre del programa' }]}>
+
+            <Form.Item
+              name="numero_documento"
+              label="Número de documento"
+              rules={[
+                {
+                  required: true,
+                  message: 'Ingresa tu número de documento'
+                }
+              ]}
+            >
               <Input size="large" />
             </Form.Item>
-            <Form.Item name="numero_ficha" label="Número de ficha"
-              rules={[{ required: true, message: 'Ingresa el número de ficha' }]}>
+
+            <Form.Item
+              name="nombre_aprendiz"
+              label="Nombre completo"
+              rules={[
+                {
+                  required: true,
+                  message: 'Ingresa tu nombre completo'
+                }
+              ]}
+            >
+              <Input size="large" />
+            </Form.Item>
+
+            <Form.Item
+              name="telefono_aprendiz"
+              label="Teléfono (opcional)"
+            >
+              <Input size="large" />
+            </Form.Item>
+
+            <Form.Item
+              name="correo_aprendiz"
+              label="Correo electrónico"
+              rules={[
+                {
+                  required: true,
+                  message: 'Ingresa tu correo'
+                },
+                {
+                  type: 'email',
+                  message: 'Correo inválido'
+                }
+              ]}
+            >
               <Input size="large" />
             </Form.Item>
           </Form>
         )}
 
-        {/* Paso 3 — Documentos */}
+        {/* ========================= */}
+        {/* PASO 2 — DATOS DEL PROGRAMA */}
+        {/* ========================= */}
+        {pasoActual === 1 && (
+          <Form form={form2} layout="vertical">
+            <Form.Item
+              name="tipo_programa_id"
+              label="Nivel de formación"
+              rules={[
+                {
+                  required: true,
+                  message: 'Selecciona el nivel de formación'
+                }
+              ]}
+            >
+              <Select
+                placeholder="Selecciona..."
+                size="large"
+                options={tiposPrograma.map(t => ({
+                  value: t.id,
+                  label: t.nombre
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="nombre_programa"
+              label="Nombre del programa"
+              rules={[
+                {
+                  required: true,
+                  message: 'Ingresa el nombre del programa'
+                }
+              ]}
+            >
+              <Input size="large" />
+            </Form.Item>
+
+            <Form.Item
+              name="numero_ficha"
+              label="Número de ficha"
+              rules={[
+                {
+                  required: true,
+                  message: 'Ingresa el número de ficha'
+                }
+              ]}
+            >
+              <Input size="large" />
+            </Form.Item>
+          </Form>
+        )}
+
+        {/* ========================= */}
+        {/* PASO 3 — DOCUMENTOS */}
+        {/* ========================= */}
         {pasoActual === 2 && (
           <div>
-            {/* Documentos aprobados — solo lectura */}
+            {/* Documentos aprobados */}
             {documentosAprobados.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                  Documentos aprobados (no se pueden modificar):
+              <div style={{ marginBottom: 28 }}>
+                <Title level={5} style={{ color: '#004A2F' }}>
+                  Documentos aprobados
+                </Title>
+
+                <Text type="secondary">
+                  Estos documentos ya fueron aprobados y no requieren cambios.
                 </Text>
-                {documentosAprobados.map(doc => (
-                  <div key={doc.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px', background: '#f6ffed',
-                    borderRadius: 8, border: '1px solid #b7eb8f', marginBottom: 8
-                  }}>
-                    <CheckCircleFilled style={{ color: '#52c41a' }} />
-                    <Text>{doc.nombre_documento}</Text>
-                    <Tag color="green" style={{ marginLeft: 'auto' }}>Aprobado</Tag>
-                  </div>
-                ))}
+
+                <div style={{ marginTop: 16 }}>
+                  {documentosAprobados.map(doc => (
+                    <div
+                      key={doc.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '14px 16px',
+                        background: '#f6ffed',
+                        border: '1px solid #b7eb8f',
+                        borderRadius: 12,
+                        marginBottom: 12
+                      }}
+                    >
+                      <CheckCircleFilled
+                        style={{
+                          color: '#52c41a',
+                          fontSize: 18
+                        }}
+                      />
+
+                      <Text>{doc.nombre_documento}</Text>
+
+                      <Tag
+                        color="green"
+                        style={{
+                          marginLeft: 'auto'
+                        }}
+                      >
+                        Aprobado
+                      </Tag>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Documentos a corregir */}
             {documentosNoAprobados.length > 0 && (
               <div>
-                <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                  Documentos a corregir:
+                <Title level={5} style={{ color: '#cf1322' }}>
+                  Documentos a corregir
+                </Title>
+
+                <Text type="secondary">
+                  Sube nuevamente los documentos observados o pendientes.
                 </Text>
-                {documentosNoAprobados.map(doc => {
-                  const archivoSubido = archivos[doc.documento_id]
-                  return (
-                    <Card
-                      key={doc.id}
-                      size="small"
-                      style={{
-                        marginBottom: 16,
-                        borderColor: archivoSubido ? '#52c41a' : '#ff7875',
-                        background: archivoSubido ? '#f6ffed' : 'white'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <div>
-                          <Text strong>{doc.nombre_documento}</Text>
-                          <Tag color="red" style={{ marginLeft: 8 }}>
-                            {doc.estado_documento === 'OBSERVADO' ? 'Observado' : 'Pendiente'}
-                          </Tag>
-                        </div>
-                        {archivoSubido && <CheckCircleFilled style={{ color: '#52c41a', fontSize: 20 }} />}
-                      </div>
 
-                      {doc.observaciones && (
-                        <Alert
-                          title={doc.observaciones}
-                          type="warning"
-                          showIcon
-                          style={{ marginBottom: 8, fontSize: 12 }}
-                        />
-                      )}
+                <div style={{ marginTop: 16 }}>
+                  {documentosNoAprobados.map(doc => {
+                    const archivoSubido = archivos[doc.documento_id]
 
-                      {archivoSubido ? (
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          background: '#d9f7be', borderRadius: 8, padding: '8px 12px'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <FilePdfOutlined style={{ color: '#52c41a', fontSize: 18 }} />
-                            <Text style={{ color: '#389e0d' }}>{archivoSubido.name}</Text>
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                              ({(archivoSubido.size / 1024 / 1024).toFixed(2)} MB)
-                            </Text>
+                    return (
+                      <Card
+                        key={doc.id}
+                        size="small"
+                        style={{
+                          marginBottom: 20,
+                          borderRadius: 16,
+                          borderColor: archivoSubido ? '#52c41a' : '#ff7875',
+                          background: archivoSubido ? '#f6ffed' : '#fff'
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 12
+                          }}
+                        >
+                          <div>
+                            <Text strong>{doc.nombre_documento}</Text>
+
+                            <Tag
+                              color="red"
+                              style={{
+                                marginLeft: 10
+                              }}
+                            >
+                              {doc.estado_documento === 'OBSERVADO'
+                                ? 'Observado'
+                                : 'Pendiente'}
+                            </Tag>
                           </div>
-                          <Button danger size="small" icon={<DeleteOutlined />}
-                            onClick={() => quitarArchivo(doc.documento_id)}>
-                            Quitar
-                          </Button>
-                        </div>
-                      ) : (
-                        <label style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          gap: 8, padding: '12px', border: '2px dashed #ff7875',
-                          borderRadius: 8, cursor: 'pointer', background: '#fff2f0'
-                        }}>
-                          <FilePdfOutlined style={{ fontSize: 20, color: '#ff4d4f' }} />
-                          <Text>Haz clic para subir el PDF corregido</Text>
-                          <input
-                            type="file" accept=".pdf" style={{ display: 'none' }}
-                            onChange={(e) => seleccionarArchivo(doc.documento_id, e)}
-                          />
-                        </label>
-                      )}
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
 
-            {documentosNoAprobados.length === 0 && (
-              <Alert
-                title="Todos tus documentos están aprobados. Solo se enviaron correcciones de datos."
-                type="success"
-                showIcon
-              />
+                          {archivoSubido && (
+                            <CheckCircleFilled
+                              style={{
+                                color: '#52c41a',
+                                fontSize: 20
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {doc.observaciones && (
+                          <Alert
+                            message={doc.observaciones}
+                            type="warning"
+                            showIcon
+                            style={{
+                              marginBottom: 14,
+                              borderRadius: 10
+                            }}
+                          />
+                        )}
+
+                        {archivoSubido ? (
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              background: '#d9f7be',
+                              borderRadius: 12,
+                              padding: '12px 14px'
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8
+                              }}
+                            >
+                              <FilePdfOutlined
+                                style={{
+                                  color: '#389e0d',
+                                  fontSize: 18
+                                }}
+                              />
+
+                              <Text>{archivoSubido.name}</Text>
+                            </div>
+
+                            <Button
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() =>
+                                quitarArchivo(doc.documento_id)
+                              }
+                            >
+                              Quitar
+                            </Button>
+                          </div>
+                        ) : (
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 8,
+                              padding: 18,
+                              border: '2px dashed #ff7875',
+                              borderRadius: 12,
+                              background: '#fff2f0',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <FilePdfOutlined
+                              style={{
+                                fontSize: 20,
+                                color: '#ff4d4f'
+                              }}
+                            />
+
+                            <Text>
+                              Haz clic para subir el PDF corregido
+                            </Text>
+
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              style={{ display: 'none' }}
+                              onChange={(e) =>
+                                seleccionarArchivo(
+                                  doc.documento_id,
+                                  e
+                                )
+                              }
+                            />
+                          </label>
+                        )}
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        {/* Botones de navegación */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32 }}>
+        {/* Footer */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 40,
+            paddingTop: 24,
+            borderTop: '1px solid #f0f0f0'
+          }}
+        >
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={pasoActual === 0 ? () => navigate('/') : anterior}
+            onClick={
+              pasoActual === 0
+                ? () => navigate('/')
+                : anterior
+            }
             size="large"
+            style={{
+              height: 48,
+              borderRadius: 12,
+              paddingInline: 24
+            }}
           >
             {pasoActual === 0 ? 'Cancelar' : 'Anterior'}
           </Button>
@@ -433,10 +701,16 @@ export default function CorregirSolicitud() {
             <Button
               type="primary"
               icon={<ArrowRightOutlined />}
-              iconPlacement="end"
               onClick={siguiente}
               size="large"
-              style={{ background: '#004A2F', borderColor: '#004A2F' }}
+              style={{
+                background: '#004A2F',
+                borderColor: '#004A2F',
+                height: 48,
+                borderRadius: 12,
+                paddingInline: 32,
+                fontWeight: 600
+              }}
             >
               Siguiente
             </Button>
@@ -447,7 +721,14 @@ export default function CorregirSolicitud() {
               onClick={enviar}
               loading={enviando}
               size="large"
-              style={{ background: '#004A2F', borderColor: '#004A2F' }}
+              style={{
+                background: '#004A2F',
+                borderColor: '#004A2F',
+                height: 48,
+                borderRadius: 12,
+                paddingInline: 32,
+                fontWeight: 600
+              }}
             >
               Enviar correcciones
             </Button>
