@@ -1,10 +1,8 @@
 import logging
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 import os
 
 from core.config import settings
@@ -18,11 +16,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Iniciando aplicación...")
+
+    if check_database_connection():
+        logger.info("Base de datos conectada correctamente")
+    else:
+        logger.error("No se pudo conectar a la base de datos")
+
+    yield
+
+    logger.info("Cerrando aplicación...")
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.PROJECT_VERSION,
     description=settings.PROJECT_DESCRIPTION,
-    swagger_ui_oauth2_redirect_url="/auth/token"
+    swagger_ui_oauth2_redirect_url="/auth/token",
+    lifespan=lifespan
 )
 
 # -------------------------------------------------------
@@ -76,18 +90,7 @@ app.include_router(plantillas.router, prefix="/plantillas", tags=["Plantillas de
 app.include_router(auditoria.router, prefix="/auditoria", tags=["Auditoría"])
 app.include_router(reportes.router, prefix="/reportes", tags=["Reportes"])
 app.include_router(roles.router, prefix="/roles", tags=["Roles y Permisos"])
-app.include_router(tipo_programas.router, prefix="/tipo-programas", tags=["Tipos de Programa"])
-
-# -------------------------------------------------------
-# Evento de inicio
-# -------------------------------------------------------
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Iniciando aplicación...")
-    if check_database_connection():
-        logger.info("Base de datos conectada correctamente")
-    else:
-        logger.error("No se pudo conectar a la base de datos")
+app.include_router(tipo_programas.router, prefix="/tipo-programas", tags=["Niveles de Formación"])
 
 
 @app.get("/")

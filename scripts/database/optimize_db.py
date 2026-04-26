@@ -7,7 +7,7 @@ Ejecutar después de hacer backup de la base de datos.
 import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from core.config import settings
+from backend.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

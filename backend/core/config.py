@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Gestión Certificación SENA"
+    PROJECT_NAME: str = "Gestión Certificación SENA - Centro Atención Sector Agropecuario"
     PROJECT_VERSION: str = "1.0.0"
     PROJECT_DESCRIPTION: str = "Sistema para gestionar y digitalizar el proceso de certificación de aprendices"
 
