@@ -253,8 +253,10 @@ export default function NuevaSolicitud() {
           boxShadow: '0 15px 40px rgba(0,0,0,0.08)',
           overflow: 'hidden'
         }}
-        bodyStyle={{
-          padding: 40
+        styles={{
+          body: {
+            padding: 40
+          }
         }}
       >
         {/* Header */}
@@ -299,15 +301,15 @@ export default function NuevaSolicitud() {
             items={[
               {
                 title: 'Datos personales',
-                description: 'Información del aprendiz'
+                content: 'Información del aprendiz'
               },
               {
                 title: 'Datos del programa',
-                description: 'Programa de formación'
+                content: 'Programa de formación'
               },
               {
                 title: 'Documentos',
-                description: 'Carga de PDF'
+                content: 'Carga de PDF'
               }
             ]}
           />

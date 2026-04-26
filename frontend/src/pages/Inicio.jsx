@@ -1,11 +1,7 @@
 import { Button, Typography, Card, Row, Col } from 'antd'
-import {
-  FileAddOutlined,
-  SearchOutlined,
-  LoginOutlined,
-  SafetyCertificateOutlined
-} from '@ant-design/icons'
+import { FileAddOutlined, SearchOutlined, LoginOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import logoSena from '../assets/logo_sena.png'
 
 const { Title, Text } = Typography
 
@@ -55,8 +51,10 @@ export default function Inicio() {
           boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
           overflow: 'hidden'
         }}
-        bodyStyle={{
-          padding: 0
+        styles={{
+          body: {
+            padding: 0
+          }
         }}
       >
         <Row>
@@ -74,7 +72,7 @@ export default function Inicio() {
           >
             <div>
               <img
-                src="/src/assets/logo_sena.png"
+                src={logoSena}
                 alt="SENA"
                 style={{
                   width: 90,
