@@ -1,0 +1,161 @@
+# ==========================================
+# CERTIFICACION SENA - Git Ignore
+# ==========================================
+# Archivos que NUNCA deben ir a GitHub
+
+# ==========================================
+# AMBIENTE Y CONFIGURACION
+# ==========================================
+
+# Variables de entorno (CRÍTICO)
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# Archivos de configuración local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ==========================================
+# DEPENDENCIAS
+# ==========================================
+
+# Python
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/dist/
+backend/build/
+
+# Node
+frontend/node_modules/
+frontend/.pnpm-debug.log*
+frontend/lerna-debug.log*
+frontend/*.local
+
+# ==========================================
+# BUILD Y COMPILACION
+# ==========================================
+
+# Frontend build
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Backend compilado
+backend/__pycache__/
+backend/*.egg-info/
+backend/build/
+backend/dist/
+
+# ==========================================
+# DATOS SENSIBLES
+# ==========================================
+
+# Base de datos local (no usar .db para BD de producción)
+*.db
+*.sqlite
+*.sqlite3
+backend/.db
+
+# Logs
+backend/logs/
+frontend/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# UPLOADS Y ARCHIVOS TEMPORALES
+# ==========================================
+
+# Archivos subidos por usuarios
+backend/uploads/
+!backend/uploads/.gitkeep
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
+
+# ==========================================
+# IDE Y EDITORES
+# ==========================================
+
+.vscode/
+.vscode-test/
+*.code-workspace
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# ==========================================
+# SISTEMA OPERATIVO
+# ==========================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# TESTS
+# ==========================================
+
+*.test.js
+*.test.py
+*.spec.js
+*.spec.py
+coverage/
+.nyc_output/
+
+# ==========================================
+# DOCUMENTACION GENERADA
+# ==========================================
+
+docs/generated/
+docs/dist/
+
+# ==========================================
+# CACHE
+# ==========================================
+
+.cache/
+.eslintcache
+.node_modules.cache
+
+# ==========================================
+# ARCHIVOS A INCLUIR AUNQUE esten en raíz
+# ==========================================
+
+# Estos sí deben ir a Git
+!.gitkeep
+!.env.example
+!.github/
+!docs/
+!scripts/

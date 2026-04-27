@@ -127,6 +127,7 @@ async def enviar_observaciones_completas(
     programa: str,
     docs_observados: list,
     token: str,
+    numero_documento: str = None,
     nombre_funcionario: str = None,
     observaciones_generales: str = None,
     solicitud_id: int = None,
@@ -140,6 +141,7 @@ async def enviar_observaciones_completas(
         link_edicion=link_edicion,
         nombre_funcionario=nombre_funcionario,
         observaciones_generales=observaciones_generales,
+        numero_documento=numero_documento,
     )
     await _enviar(
         correo, "SENA - Tu solicitud requiere correcciones", html,
@@ -151,6 +153,7 @@ async def enviar_certificacion_completada(
     correo: str,
     nombre: str,
     programa: str,
+    numero_documento: str = None,
     solicitud_id: int = None,
     db=None,
 ) -> None:
@@ -158,6 +161,7 @@ async def enviar_certificacion_completada(
         nombre=nombre,
         programa=programa,
         frontend_url=settings.FRONTEND_URL,
+        numero_documento=numero_documento,
     )
     await _enviar(
         correo, "SENA - ¡Felicitaciones, fuiste certificado!", html,
@@ -169,11 +173,12 @@ async def enviar_notificacion_rechazo_externo(
     correo: str, nombre: str, programa: str,
     motivo: str, nombre_funcionario_rechazo: str,
     correo_funcionario_rechazo: str,
+    numero_documento: str = None,
     solicitud_id: int = None, db=None
 ) -> None:
     from app.utils.email_templates import template_notificacion_rechazo_externo
     html = template_notificacion_rechazo_externo(
-        nombre=nombre, programa=programa, motivo=motivo,
+        nombre=nombre, programa=programa, motivo=motivo, numero_documento=numero_documento,
         nombre_funcionario_rechazo=nombre_funcionario_rechazo,
         correo_funcionario_rechazo=correo_funcionario_rechazo
     )

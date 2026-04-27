@@ -124,7 +124,7 @@ def _base_template(contenido: str) -> str:
         <div class="container">
             <div class="header">
                 <h1>SENA</h1>
-                <h2 style="color: #ffffff;">Centro Atención Sector Agropecuario Regional Risaralda</h2>
+                <h2 style="color: #ffffff;">Centro Atención Sector Agropecuario</h2>
                 <p>Sistema de Gestión de Certificaciones</p>
             </div>
             <div class="body">
@@ -182,7 +182,7 @@ NOMBRES_CAMPOS = {
     "numero_documento": "Número de documento",
 }
 
-def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, nombre_funcionario: str = None, observaciones_generales: str = None) -> str:
+def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, numero_documento: str = None, observaciones_generales: str = None) -> str:
     docs_html = ""
     if docs_observados:
         items = "".join([
@@ -205,7 +205,7 @@ def template_observaciones_completas(nombre: str, programa: str, docs_observados
 
     contenido = f"""
         <h2>Tu solicitud requiere correcciones</h2>
-        <p>Hola <strong>{nombre}</strong>,</p>
+        <p>Hola <strong>{nombre} {numero_documento}</strong>,</p>
         <p>El funcionario de certificación ha revisado tu solicitud del programa
         <strong>{programa}</strong> y encontró lo siguiente:</p>
         {docs_html}
@@ -225,10 +225,10 @@ def template_observaciones_completas(nombre: str, programa: str, docs_observados
 # Template: Solicitud certificada
 # -------------------------------------------------------
 
-def template_solicitud_certificada(nombre: str, programa: str, frontend_url: str) -> str:
+def template_solicitud_certificada(nombre: str, programa: str, frontend_url: str, numero_documento: str = None) -> str:
     contenido = f"""
         <h2>¡Felicitaciones, fuiste certificado!</h2>
-        <p>Hola <strong>{nombre}</strong>,</p>
+        <p>Hola <strong>{nombre} {numero_documento}</strong>,</p>
         <p>Nos complace informarte que tu proceso de certificación del programa
         <strong>{programa}</strong> ha sido completado exitosamente.</p>
 

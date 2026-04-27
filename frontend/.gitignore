@@ -1,4 +1,11 @@
-# Logs
+# ==========================================
+# FRONTEND - Git Ignore (Node/React/Vite)
+# ==========================================
+
+# ==========================================
+# LOGS
+# ==========================================
+
 logs
 *.log
 npm-debug.log*
@@ -7,18 +14,84 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ==========================================
+# DEPENDENCIAS
+# ==========================================
+
 node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-debug.log*
+
+# ==========================================
+# BUILD Y COMPILACION
+# ==========================================
+
 dist
 dist-ssr
+build
 *.local
+*.tsbuildinfo
 
-# Editor directories and files
+# ==========================================
+# VARIABLES DE ENTORNO
+# ==========================================
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ==========================================
+# IDE Y EDITORES
+# ==========================================
+
 .vscode/*
 !.vscode/extensions.json
+.vscode-test/
+*.code-workspace
 .idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ==========================================
+# SISTEMA OPERATIVO
+# ==========================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# CACHE
+# ==========================================
+
+.cache/
+.eslintcache
+.node_modules.cache
+
+# ==========================================
+# OTROS
+# ==========================================
+
+*.pem
+*.key
+*.crt
+.turbo
+.next
+out/

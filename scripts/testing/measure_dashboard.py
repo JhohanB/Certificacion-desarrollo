@@ -3,8 +3,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(__file__))
 
-from app.router.reportes import reporte_dashboard
-from core.database import get_db
+from backend.app.router.reportes import reporte_dashboard
+from backend.core.database import get_db
 
 start = time.time()
 db = next(get_db())
