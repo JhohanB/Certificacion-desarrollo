@@ -174,9 +174,15 @@ export default function Solicitudes() {
   }
 
   const certificadosVisibles = useMemo(() => {
-    return agrupar 
-      ? (solicitudesAgrupadas?.flatMap(g => g.items) || []).filter(s => s.estado_actual === 'CERTIFICADO')
-      : solicitudesFiltradas.filter(s => s.estado_actual === 'CERTIFICADO')
+    const lista = agrupar
+      ? (solicitudesAgrupadas?.flatMap(g => g.items) || [])
+      : solicitudesFiltradas
+
+    return lista.filter(
+      s =>
+        s.estado_actual === 'CERTIFICADO' &&
+        !s.documentos_eliminados
+    )
   }, [agrupar, solicitudesAgrupadas, solicitudesFiltradas])
 
   const solicitudesEliminables = useMemo(() => {
@@ -393,36 +399,45 @@ export default function Solicitudes() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 8, flexWrap: 'wrap' }}>
         <Title level={4} style={{ margin: 0 }}>Solicitudes</Title>
         <Space>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => {
-              setModoEliminar(!modoEliminar)
-              setSeleccionadasEliminar([])
-            }}
-          >
-            {modoEliminar ? 'Cancelar eliminación' : 'Eliminar documentos'}
+          <Button icon={<ReloadOutlined />} onClick={cargar}>
+            Actualizar
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
-          <Button
-            icon={<DownloadOutlined />}
-            type="primary"
-            loading={descargandoCertificados}
-            disabled={!certificadosVisibles.length}
-            onClick={descargarCertificadosMasivo}
-          >
-            Descargar certificados ({certificadosVisibles.length})
-          </Button>
-          {modoEliminar && (
-            <Button
-              type="primary"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={!seleccionadasEliminar.length}
-              onClick={abrirModalEliminar}
-            >
-              Confirmar eliminación ({seleccionadasEliminar.length})
-            </Button>
+
+          {tieneAccesoCompleto && (
+            <>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  setModoEliminar(!modoEliminar)
+                  setSeleccionadasEliminar([])
+                }}
+              >
+                {modoEliminar ? 'Cancelar eliminación' : 'Eliminar documentos'}
+              </Button>
+
+              <Button
+                icon={<DownloadOutlined />}
+                type="primary"
+                loading={descargandoCertificados}
+                disabled={!certificadosVisibles.length}
+                onClick={descargarCertificadosMasivo}
+              >
+                Descargar certificados ({certificadosVisibles.length})
+              </Button>
+
+              {modoEliminar && (
+                <Button
+                  type="primary"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled={!seleccionadasEliminar.length}
+                  onClick={abrirModalEliminar}
+                >
+                  Confirmar eliminación ({seleccionadasEliminar.length})
+                </Button>
+              )}
+            </>
           )}
         </Space>
       </div>
