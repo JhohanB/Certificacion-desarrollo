@@ -678,6 +678,7 @@ async def certificar_solicitud(
     # Notificar al aprendiz que fue certificado
     await enviar_certificacion_completada(
         correo=solicitud["correo_aprendiz"],
+        numero_documento=solicitud["numero_documento"],
         nombre=solicitud["nombre_aprendiz"],
         programa=solicitud["nombre_programa"],
         solicitud_id=solicitud_id,

@@ -7,7 +7,7 @@ import os
 
 from core.config import settings
 from core.database import check_database_connection
-from app.router import auth, usuarios, solicitudes, documentos, plantillas, auditoria, reportes, roles, tipo_programas
+from app.router import auth, usuarios, solicitudes, documentos, plantillas, auditoria, reportes, roles, tipo_programas, solicitudes_eliminar_documentos
 
 # Configurar logging
 logging.basicConfig(
@@ -85,6 +85,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(solicitudes.router, prefix="/solicitudes", tags=["Solicitudes"])
+app.include_router(solicitudes_eliminar_documentos.router, prefix="/solicitudes", tags=["Solicitudes"])
 app.include_router(documentos.router, prefix="/documentos", tags=["Documentos y Firmas"])
 app.include_router(plantillas.router, prefix="/plantillas", tags=["Plantillas de Formato"])
 app.include_router(auditoria.router, prefix="/auditoria", tags=["Auditoría"])

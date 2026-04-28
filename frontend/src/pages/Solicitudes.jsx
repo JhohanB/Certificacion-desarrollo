@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Table, Tag, Button, Select, Input, Card, Typography, Space, message, DatePicker, Skeleton } from 'antd'
+import { Table, Tag, Button, Select, Input, Card, Typography, Space, message, DatePicker, Skeleton, Modal, Form } from 'antd'
 const { RangePicker } = DatePicker
-import { SearchOutlined, EyeOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons'
+import { SearchOutlined, EyeOutlined, ReloadOutlined, DownloadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
@@ -57,6 +57,13 @@ export default function Solicitudes() {
   const [agrupar, setAgrupar] = useState(false)
   const [pagina, setPagina] = useState(1)
   const [descargandoCertificados, setDescargandoCertificados] = useState(false)
+  const [modoEliminar, setModoEliminar] = useState(false)
+  const [seleccionadasEliminar, setSeleccionadasEliminar] = useState([])
+  const [modalPasswordVisible, setModalPasswordVisible] = useState(false)
+  const [passwordEliminar, setPasswordEliminar] = useState('')
+  const [eliminandoDocumentos, setEliminandoDocumentos] = useState(false)
+  const [resultadoEliminacion, setResultadoEliminacion] = useState(null)
+  const [modalResultadoVisible, setModalResultadoVisible] = useState(false)
   const navigate = useNavigate()
   const { usuario, rolActivo } = useAuth()
 
@@ -172,6 +179,14 @@ export default function Solicitudes() {
       : solicitudesFiltradas.filter(s => s.estado_actual === 'CERTIFICADO')
   }, [agrupar, solicitudesAgrupadas, solicitudesFiltradas])
 
+  const solicitudesEliminables = useMemo(() => {
+    return solicitudesFiltradas.filter(
+      s =>
+        s.estado_actual === 'CERTIFICADO' &&
+        !s.documentos_eliminados
+    )
+  }, [solicitudesFiltradas])
+
   const descargarCertificadosMasivo = async () => {
     if (!certificadosVisibles.length) {
       message.warning('No hay certificados para descargar en los resultados actuales')
@@ -204,6 +219,49 @@ export default function Solicitudes() {
       message.error('Error al descargar los certificados')
     } finally {
       setDescargandoCertificados(false)
+    }
+  }
+
+  const abrirModalEliminar = () => {
+    if (!seleccionadasEliminar.length) {
+      message.warning('Seleccione al menos una solicitud')
+      return
+    }
+
+    setModalPasswordVisible(true)
+  }
+
+  const confirmarEliminarDocumentos = async () => {
+    if (!passwordEliminar.trim()) {
+      message.warning('Debe ingresar su contraseña')
+      return
+    }
+
+    setEliminandoDocumentos(true)
+
+    try {
+      const { data } = await api.post('/solicitudes/eliminar-documentos', {
+        solicitud_ids: seleccionadasEliminar,
+        password: passwordEliminar
+      })
+
+      setModalPasswordVisible(false)
+      setPasswordEliminar('')
+      setModoEliminar(false)
+      setSeleccionadasEliminar([])
+
+      setResultadoEliminacion(data)
+      setModalResultadoVisible(true)
+
+      await cargar()
+
+    } catch (error) {
+      message.error(
+        error?.response?.data?.detail ||
+        'Error al eliminar documentos'
+      )
+    } finally {
+      setEliminandoDocumentos(false)
     }
   }
 
@@ -261,6 +319,19 @@ export default function Solicitudes() {
 
     return null
   }, [tieneAccesoCompleto, esAdmin, puedeDescargar, esCoordinador, esFirmante, navigate])
+
+  const rowSelection = modoEliminar ? {
+    selectedRowKeys: seleccionadasEliminar,
+    onChange: (selectedRowKeys) => {
+      setSeleccionadasEliminar(selectedRowKeys)
+    },
+    getCheckboxProps: (record) => ({
+      disabled: !(
+        record.estado_actual === 'CERTIFICADO' &&
+        !record.documentos_eliminados
+      )
+    })
+  } : null
 
   const columnas = [
     {
@@ -322,6 +393,16 @@ export default function Solicitudes() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 8, flexWrap: 'wrap' }}>
         <Title level={4} style={{ margin: 0 }}>Solicitudes</Title>
         <Space>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              setModoEliminar(!modoEliminar)
+              setSeleccionadasEliminar([])
+            }}
+          >
+            {modoEliminar ? 'Cancelar eliminación' : 'Eliminar documentos'}
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={cargar}>Actualizar</Button>
           <Button
             icon={<DownloadOutlined />}
@@ -332,6 +413,17 @@ export default function Solicitudes() {
           >
             Descargar certificados ({certificadosVisibles.length})
           </Button>
+          {modoEliminar && (
+            <Button
+              type="primary"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={!seleccionadasEliminar.length}
+              onClick={abrirModalEliminar}
+            >
+              Confirmar eliminación ({seleccionadasEliminar.length})
+            </Button>
+          )}
         </Space>
       </div>
 
@@ -395,13 +487,14 @@ export default function Solicitudes() {
               }}>
                 {tipo} — {items.length} solicitudes
               </div>
-              <Table dataSource={items} columns={columnas} rowKey="id" size="small"
+              <Table rowSelection={rowSelection} dataSource={items} columns={columnas} rowKey="id" size="small"
                 scroll={{ x: 800 }} pagination={{ pageSize: 5 }}
                 locale={{ emptyText: 'No hay solicitudes' }} />
             </div>
           ))
         ) : (
           <Table
+            rowSelection={rowSelection}
             dataSource={solicitudesFiltradas}
             columns={columnas}
             rowKey="id"
@@ -417,6 +510,56 @@ export default function Solicitudes() {
           />
         )}
       </Card>
+
+      <Modal
+        title="Confirmar eliminación de documentos"
+        open={modalPasswordVisible}
+        onCancel={() => setModalPasswordVisible(false)}
+        onOk={confirmarEliminarDocumentos}
+        confirmLoading={eliminandoDocumentos}
+        okText="Eliminar documentos"
+        okButtonProps={{ danger: true }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Text>
+            Esta acción eliminará permanentemente los documentos físicos,
+            el PDF consolidado y los registros asociados de las solicitudes
+            seleccionadas.
+          </Text>
+
+          <Text strong>
+            Esta acción no se puede deshacer.
+          </Text>
+
+          <Input.Password
+            placeholder="Ingrese su contraseña"
+            value={passwordEliminar}
+            onChange={(e) => setPasswordEliminar(e.target.value)}
+          />
+        </Space>
+      </Modal>
+
+      <Modal
+        title="Resultado de eliminación"
+        open={modalResultadoVisible}
+        footer={null}
+        onCancel={() => setModalResultadoVisible(false)}
+        width={700}
+      >
+        {resultadoEliminacion && (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Text strong>{resultadoEliminacion.mensaje_resumen}</Text>
+
+            {resultadoEliminacion.detalles.map((item) => (
+              <Card key={item.solicitud_id} size="small">
+                <Text strong>{item.nombre_aprendiz}</Text>
+                <br />
+                <Text>{item.mensaje}</Text>
+              </Card>
+            ))}
+          </Space>
+        )}
+      </Modal>
     </div>
   )
 }

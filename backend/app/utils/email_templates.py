@@ -152,7 +152,7 @@ def template_solicitud_recibida(nombre: str, programa: str, ficha: str, tipo_pro
 
         <div class="info-box">
             <p><strong>Programa:</strong> {programa}</p>
-            <p><strong>Tipo:</strong> {tipo_programa}</p>
+            <p><strong>Nivel:</strong> {tipo_programa}</p>
             <p><strong>Ficha:</strong> {ficha}</p>
             <p><strong>Estado:</strong> En revisión</p>
         </div>
@@ -182,7 +182,7 @@ NOMBRES_CAMPOS = {
     "numero_documento": "Número de documento",
 }
 
-def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, numero_documento: str = None, observaciones_generales: str = None) -> str:
+def template_observaciones_completas(nombre: str, programa: str, docs_observados: list, link_edicion: str, numero_documento: str = None, nombre_funcionario: str = None, observaciones_generales: str = None) -> str:
     docs_html = ""
     if docs_observados:
         items = "".join([
@@ -242,6 +242,9 @@ def template_solicitud_certificada(nombre: str, programa: str, frontend_url: str
             <p>2. Seleccione su tipo de documento, digite el número y haga clic en "Consultar"</p>
             <p>3. Descarga tu certificado de formación</p>
         </div>
+        <p style="margin-top: 12px;">
+            <strong>Nota importante:</strong> La disponibilidad del certificado en la plataforma puede tardar entre 15 y 20 días hábiles después de finalizado y certificado el proceso. Te recomendamos consultar nuevamente pasado este tiempo.
+        </p>
 
         <p>¡Gracias por tu dedicación y esfuerzo!</p>
     """

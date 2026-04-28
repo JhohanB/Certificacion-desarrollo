@@ -30,7 +30,7 @@ INSERT INTO `roles` VALUES
 (1,'ADMIN','Administrador del sistema',0,1,0,0,1),
 (2,'FUNCIONARIO_CERTIFICACION','Revisa y aprueba documentos de solicitudes',0,1,0,1,0),
 (3,'APE','Agencia Pública de Empleo, firma documentos',1,1,0,0,0),
-(4,'INSTRUCTOR_SEGUIMIENTO','Instructor de seguimiento, firma documentos',1,0,0,0,0),
+(4,'INSTRUCTOR_SEGUIMIENTO','Instructor de seguimiento, firma documentos',1,1,0,0,0),
 (5,'BIENESTAR','Bienestar al Aprendiz, firma documentos',1,1,0,0,0),
 (6,'BIBLIOTECA','Biblioteca, firma documentos',1,1,0,0,0),
 (7,'COORDINADOR','Coordinador Academico, firma de último en el proceso',1,1,1,0,0);

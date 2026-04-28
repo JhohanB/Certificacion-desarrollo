@@ -112,7 +112,8 @@ def get_solicitud_by_id(db: Session, solicitud_id: int) -> Optional[dict]:
                 s.tipo_programa_id, tp.nombre AS nombre_tipo_programa,
                 s.nombre_programa, s.estado_actual,
                 s.observaciones_generales, s.pdf_consolidado_url,
-                s.plantilla_id, s.fecha_solicitud
+                s.plantilla_id, s.fecha_solicitud,
+                s.documentos_eliminados, s.fecha_eliminacion_documentos
             FROM solicitudes s
             INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id
             WHERE s.id = :solicitud_id
@@ -141,7 +142,8 @@ def get_solicitud_by_doc_ficha(db: Session, numero_documento: str, numero_ficha:
                 s.tipo_programa_id, tp.nombre AS nombre_tipo_programa,
                 s.nombre_programa, s.estado_actual,
                 s.observaciones_generales,
-                s.pdf_consolidado_url, s.fecha_solicitud
+                s.pdf_consolidado_url, s.fecha_solicitud,
+                s.documentos_eliminados, s.fecha_eliminacion_documentos
             FROM solicitudes s
             INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id
             WHERE s.numero_documento = :numero_documento
@@ -204,7 +206,7 @@ def get_all_solicitudes(db: Session, estado: Optional[str] = None, tipo_programa
                 s.nombre_aprendiz, s.correo_aprendiz, s.nombre_programa,
                 tp.nombre AS nombre_tipo_programa,
                 s.estado_actual, s.pdf_consolidado_url,
-                s.fecha_solicitud
+                s.fecha_solicitud, s.documentos_eliminados
                 {ya_firme_col}
             FROM solicitudes s
             INNER JOIN tipo_programas tp ON tp.id = s.tipo_programa_id

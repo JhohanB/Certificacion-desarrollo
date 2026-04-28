@@ -162,6 +162,28 @@ def get_usuario_by_correo(db: Session, correo: str) -> Optional[dict]:
         raise
 
 
+def get_usuario_by_id_con_password(db: Session, usuario_id: int) -> Optional[dict]:
+    """
+    Obtiene un usuario por ID incluyendo password_hash.
+    Se usa para validación de contraseña en operaciones sensibles.
+    """
+    try:
+        query = text("""
+            SELECT
+                u.id, u.documento, u.nombre_completo, u.correo, u.telefono,
+                u.password_hash, u.firma_registrada, u.firma_url,
+                u.activo, u.debe_cambiar_password, u.debe_registrar_firma,
+                u.created_at
+            FROM usuarios u
+            WHERE u.id = :usuario_id
+        """)
+        usuario = db.execute(query, {"usuario_id": usuario_id}).mappings().first()
+        return dict(usuario) if usuario else None
+    except SQLAlchemyError as e:
+        logger.error(f"Error al obtener usuario por ID con password: {e}")
+        raise
+
+
 def get_all_usuarios(db: Session, page: int = 1, limit: int = 50) -> list:
     """
     Obtiene todos los funcionarios con sus roles.

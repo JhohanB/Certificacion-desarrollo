@@ -207,6 +207,7 @@ async def enviar_observaciones(
         create_token_edicion(db, solicitud_id, token)
         await enviar_observaciones_completas(
             correo=solicitud["correo_aprendiz"],
+            numero_documento=solicitud["numero_documento"],
             nombre=solicitud["nombre_aprendiz"],
             programa=solicitud["nombre_programa"],
             docs_observados=docs_observados,
@@ -287,6 +288,7 @@ async def reenviar_observaciones(
         create_token_edicion(db, solicitud_id, token)
         await enviar_observaciones_completas(
             correo=solicitud["correo_aprendiz"],
+            numero_documento=solicitud["numero_documento"],
             nombre=solicitud["nombre_aprendiz"],
             programa=solicitud["nombre_programa"],
             docs_observados=docs_observados,
@@ -582,6 +584,7 @@ async def reenviar_notificacion(
 
     await enviar_observaciones_completas(
         correo=solicitud["correo_aprendiz"],
+        numero_documento=solicitud["numero_documento"],
         nombre=solicitud["nombre_aprendiz"],
         programa=solicitud["nombre_programa"],
         docs_observados=docs_observados,
@@ -716,6 +719,7 @@ async def confirmar_revision(
 
         await enviar_observaciones_completas(
             correo=solicitud["correo_aprendiz"],
+            numero_documento=solicitud["numero_documento"],
             nombre=solicitud["nombre_aprendiz"],
             programa=solicitud["nombre_programa"],
             docs_observados=docs_observados,

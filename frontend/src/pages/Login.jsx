@@ -121,7 +121,7 @@ export default function Login() {
                     width: 90,
                     background: 'white',
                     padding: 12,
-                    borderRadius: 16,
+                    borderRadius: 50,
                     boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
                     objectFit: 'contain',
                     marginBottom: 24

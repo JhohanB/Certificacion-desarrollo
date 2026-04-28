@@ -173,6 +173,8 @@ CREATE TABLE `solicitudes` (
   `fecha_solicitud` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `observaciones_generales` text,
   `plantilla_id` int DEFAULT NULL,
+  `documentos_eliminados` tinyint(1) DEFAULT '0',
+  `fecha_eliminacion_documentos` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_doc_ficha` (`numero_documento`,`numero_ficha`),
   KEY `idx_estado` (`estado_actual`),

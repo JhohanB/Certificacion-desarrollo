@@ -137,6 +137,8 @@ class SolicitudOut(BaseModel):
     plantilla_id: Optional[int] = None
     pdf_consolidado_url: Optional[str] = None
     fecha_solicitud: datetime
+    documentos_eliminados: bool = False
+    fecha_eliminacion_documentos: Optional[datetime] = None
     documentos: List[DocumentoSolicitudOut] = []   
 
 # -------------------------------------------------------
@@ -171,7 +173,43 @@ class SolicitudListOut(BaseModel):
     estado_actual: EstadoSolicitud
     pdf_consolidado_url: Optional[str] = None
     fecha_solicitud: datetime
+    documentos_eliminados: bool = False
     ya_firme: Optional[bool] = False
     es_mi_firma: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# -------------------------------------------------------
+# Eliminación de documentos de solicitudes certificadas
+# -------------------------------------------------------
+
+class EliminarDocumentosSolicitudRequest(BaseModel):
+    """
+    Request para eliminar documentos de múltiples solicitudes.
+    Solo se pueden eliminar solicitudes con estado CERTIFICADO
+    y que aún tengan documentos (documentos_eliminados = False)
+    """
+    solicitud_ids: List[int] = Field(min_items=1)
+    password: str = Field(min_length=1)
+
+
+class SolicitudEliminada(BaseModel):
+    """Información de una solicitud con documentos eliminados"""
+    solicitud_id: int
+    numero_documento: str
+    numero_ficha: str
+    nombre_aprendiz: str
+    documentos_cantidad: int
+    documentos_eliminados: int
+    estado: str  # "éxito" o "error"
+    mensaje: Optional[str] = None
+
+
+class EliminarDocumentosSolicitudResponse(BaseModel):
+    """Response con el resultado de la operación"""
+    total_solicitudes: int
+    exitosas: int
+    fallidas: int
+    detalles: List[SolicitudEliminada]
+    mensaje_resumen: str

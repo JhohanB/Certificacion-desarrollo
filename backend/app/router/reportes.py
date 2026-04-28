@@ -696,7 +696,6 @@ def reporte_dashboard(
             AND tpr.tipo_programa_id = s.tipo_programa_id
         WHERE f.estado_firma = 'PENDIENTE'
         AND s.estado_actual = 'PENDIENTE_FIRMAS'
-        AND f.usuario_id = :usuario_id
         AND tpr.orden_firma = (
             SELECT MIN(tpr_inner.orden_firma)
             FROM firmas f_inner
